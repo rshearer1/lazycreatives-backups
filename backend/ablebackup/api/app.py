@@ -10,23 +10,29 @@ from ablebackup.api.auth import require_token, ws_token_ok
 from ablebackup.api.progress import ProgressHub
 from ablebackup.api.schemas import BackupRequest, Config, ScanRequest
 from ablebackup.catalog import Catalog
+from ablebackup.scheduler import BackupScheduler
 from ablebackup.service import default_timestamp, run_backup, scan_summary
 
 
 def create_app(token: str, db_path: Path) -> FastAPI:
     catalog = Catalog(Path(db_path))
     hub = ProgressHub()
+    scheduler = BackupScheduler(catalog)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         hub.bind_loop(asyncio.get_running_loop())
+        saved = catalog.get_setting("config") or {}
+        scheduler.set_interval(saved.get("interval_minutes", 0))
         yield
+        scheduler.shutdown()
         catalog.close()
 
     app = FastAPI(title="ablebackup", lifespan=lifespan)
     app.state.token = token
     app.state.catalog = catalog
     app.state.hub = hub
+    app.state.scheduler = scheduler
     app.state.jobs = {}
 
     @app.get("/health")
@@ -41,6 +47,7 @@ def create_app(token: str, db_path: Path) -> FastAPI:
     @app.put("/api/settings", dependencies=[Depends(require_token)])
     def put_settings(config: Config) -> Config:
         app.state.catalog.set_setting("config", config.model_dump())
+        app.state.scheduler.set_interval(config.interval_minutes)
         return config
 
     def _resolve_sources(supplied):
