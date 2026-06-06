@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 
 from ablebackup.api.auth import require_token, ws_token_ok
 from ablebackup.api.progress import ProgressHub
@@ -29,6 +30,16 @@ def create_app(token: str, db_path: Path) -> FastAPI:
         catalog.close()
 
     app = FastAPI(title="ablebackup", lifespan=lifespan)
+    # The Electron renderer runs at a different origin (dev: http://localhost:5173,
+    # packaged: file://) than the sidecar, so the browser sends CORS preflight
+    # OPTIONS requests. Auth is via the X-Auth-Token header (not cookies), so it is
+    # safe to allow all origins on this localhost-only server.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.state.token = token
     app.state.catalog = catalog
     app.state.hub = hub
