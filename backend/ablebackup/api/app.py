@@ -91,4 +91,20 @@ def create_app(token: str, db_path: Path) -> FastAPI:
             raise HTTPException(status_code=404, detail="unknown job")
         return job
 
+    @app.get("/api/history", dependencies=[Depends(require_token)])
+    def history(limit: int = 50):
+        return {"snapshots": app.state.catalog.recent_snapshots(limit=limit)}
+
+    @app.get("/api/projects", dependencies=[Depends(require_token)])
+    def projects():
+        return {"projects": app.state.catalog.projects_summary()}
+
+    @app.get("/api/projects/{name}", dependencies=[Depends(require_token)])
+    def project_detail(name: str):
+        cat = app.state.catalog
+        snaps = cat.snapshots_for(name)
+        for s in snaps:
+            s["missing"] = cat.missing_for(s["id"])
+        return {"project_name": name, "snapshots": snaps}
+
     return app
