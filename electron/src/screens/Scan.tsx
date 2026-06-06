@@ -1,4 +1,57 @@
+import { useState } from "react";
+import { makeApi } from "../api";
+import type { ProjectSummary } from "../types";
+import { Button } from "../components/Button";
+
+const api = makeApi();
+function fmtSize(n: number) {
+  if (n > 1e9) return (n / 1e9).toFixed(2) + " GB";
+  if (n > 1e6) return (n / 1e6).toFixed(1) + " MB";
+  if (n > 1e3) return (n / 1e3).toFixed(0) + " KB";
+  return n + " B";
+}
+
 export function Scan({ onBackupStarted }: { onBackupStarted: () => void }) {
-  return (<><h1>Scan & Back up</h1><p className="sub">Discover projects.</p>
-    <button onClick={onBackupStarted}>go</button></>);
+  const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function scan() {
+    setBusy(true); setErr(null);
+    try { setProjects(await api.scan()); }
+    catch (e: any) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+  async function backupAll() {
+    setErr(null);
+    try { await api.startBackup({}); onBackupStarted(); }
+    catch (e: any) { setErr(e.message); }
+  }
+
+  return (
+    <>
+      <h1>Scan & Back up</h1>
+      <p className="sub">Find projects in your source folders and back them up.</p>
+      <div style={{ display: "flex", gap: 12, marginBottom: 18 }}>
+        <Button onClick={scan} disabled={busy}>{busy ? "Scanning…" : "Scan now"}</Button>
+        {projects && projects.length > 0 &&
+          <Button variant="primary" onClick={backupAll}>Back up all ({projects.length})</Button>}
+      </div>
+      {err && <div className="card" style={{ borderColor: "var(--danger)", color: "var(--danger)", marginBottom: 18 }}>{err}</div>}
+      {projects && projects.length === 0 && <p className="sub">No projects found. Check your source folders.</p>}
+      {projects && projects.map((p) => (
+        <div key={p.als_path} className="card" style={{ marginBottom: 10, display: "flex", justifyContent: "space-between" }}>
+          <div>
+            <strong>{p.name}</strong>
+            <div className="sub" style={{ margin: 0 }}>{p.project_dir}</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div>{p.present_count} files · {fmtSize(p.total_size)}</div>
+            {p.missing_count > 0 &&
+              <div style={{ color: "var(--warn)" }}>{p.missing_count} missing</div>}
+          </div>
+        </div>
+      ))}
+    </>
+  );
 }
