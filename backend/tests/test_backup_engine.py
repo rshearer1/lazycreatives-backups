@@ -76,3 +76,45 @@ def test_missing_ref_recorded_not_fatal(tmp_path):
 
     assert result.missing == ["Samples/gone.wav"]
     assert (dest / "projects" / "Song" / "2026-06-06_1430" / "Song.als").exists()
+
+
+def test_reused_sample_backed_up_once(tmp_path):
+    proj = tmp_path / "Song Project"
+    (proj / "Samples").mkdir(parents=True)
+    (proj / "Samples" / "loop.wav").write_bytes(b"loopdata")
+    # Same sample referenced by two clips -> two FileRefs to the same file.
+    write_als(proj / "Song.als", [
+        fileref_rel("Samples/loop.wav", "loop.wav"),
+        fileref_rel("Samples/loop.wav", "loop.wav"),
+    ])
+    scan = scan_projects([proj])[0]
+    dest = tmp_path / "NAS" / "AbletonBackups"
+
+    result = backup_project(scan, dest, timestamp="2026-06-06_1430")
+
+    assert result.file_count == 2  # als + one copy of the reused sample
+    assert (dest / "projects" / "Song" / "2026-06-06_1430" / "Samples" / "loop.wav").exists()
+
+
+def test_external_name_collision_disambiguated(tmp_path):
+    proj = tmp_path / "Song Project"
+    proj.mkdir(parents=True)
+    lib_a = tmp_path / "libA"
+    lib_b = tmp_path / "libB"
+    lib_a.mkdir()
+    lib_b.mkdir()
+    (lib_a / "kick.wav").write_bytes(b"kickA")
+    (lib_b / "kick.wav").write_bytes(b"kickB")
+    write_als(proj / "Song.als", [
+        fileref_abs(str(lib_a / "kick.wav"), "kick.wav"),
+        fileref_abs(str(lib_b / "kick.wav"), "kick.wav"),
+    ])
+    scan = scan_projects([proj])[0]
+    dest = tmp_path / "NAS" / "AbletonBackups"
+
+    result = backup_project(scan, dest, timestamp="2026-06-06_1430")
+
+    assert result.file_count == 3  # als + two distinct external files
+    snap = dest / "projects" / "Song" / "2026-06-06_1430" / "_External"
+    contents = sorted(p.read_bytes() for p in snap.iterdir())
+    assert contents == [b"kickA", b"kickB"]

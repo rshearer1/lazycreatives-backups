@@ -46,9 +46,8 @@ def _logical_path(scan: ProjectScan, ref) -> str:
     return f"_External/{ref.name}"
 
 
-def _place(pool: Path, src: Path, dest_file: Path, use_hardlinks: bool) -> int:
-    """Store src in the pool by hash and link/copy it to dest_file. Returns size."""
-    digest = hash_file(src)
+def _place(pool: Path, src: Path, dest_file: Path, use_hardlinks: bool, digest: str) -> int:
+    """Store src in the pool under its digest and link/copy it to dest_file. Returns size."""
     pooled = pool / digest[:2] / digest
     if not pooled.exists():
         pooled.parent.mkdir(parents=True, exist_ok=True)
@@ -59,6 +58,12 @@ def _place(pool: Path, src: Path, dest_file: Path, use_hardlinks: bool) -> int:
     else:
         shutil.copy2(pooled, dest_file)
     return pooled.stat().st_size
+
+
+def _disambiguate(logical: str, digest: str) -> str:
+    """Insert a short hash before the suffix so different files don't collide."""
+    p = Path(logical)
+    return p.with_name(f"{p.stem}.{digest[:8]}{p.suffix}").as_posix()
 
 
 def backup_project(scan: ProjectScan, dest_root: Path, timestamp: str) -> BackupResult:
@@ -74,9 +79,13 @@ def backup_project(scan: ProjectScan, dest_root: Path, timestamp: str) -> Backup
     total_size = 0
     file_count = 0
     missing: list[str] = []
+    placed: dict[str, str] = {}  # logical path -> file digest, to handle collisions
 
     # The .als itself.
-    total_size += _place(pool, scan.als_path, temp_dir / scan.als_path.name, use_hardlinks)
+    als_digest = hash_file(scan.als_path)
+    total_size += _place(pool, scan.als_path, temp_dir / scan.als_path.name,
+                         use_hardlinks, als_digest)
+    placed[scan.als_path.name] = als_digest
     file_count += 1
 
     # Each resolved reference.
@@ -85,7 +94,17 @@ def backup_project(scan: ProjectScan, dest_root: Path, timestamp: str) -> Backup
             missing.append(ref.expected_path or ref.name)
             continue
         logical = _logical_path(scan, ref)
-        total_size += _place(pool, ref.resolved_path, temp_dir / logical, use_hardlinks)
+        digest = hash_file(ref.resolved_path)
+        existing = placed.get(logical)
+        if existing is not None:
+            if existing == digest:
+                continue  # identical file already placed (e.g. sample reused across clips)
+            logical = _disambiguate(logical, digest)
+            if placed.get(logical) == digest:
+                continue  # this exact different-content file already disambiguated+placed
+        total_size += _place(pool, ref.resolved_path, temp_dir / logical,
+                             use_hardlinks, digest)
+        placed[logical] = digest
         file_count += 1
 
     manifest = {
