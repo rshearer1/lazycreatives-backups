@@ -4,9 +4,9 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 
-from ablebackup.api.auth import require_token
+from ablebackup.api.auth import require_token, ws_token_ok
 from ablebackup.api.progress import ProgressHub
 from ablebackup.api.schemas import BackupRequest, Config, ScanRequest
 from ablebackup.catalog import Catalog
@@ -106,5 +106,22 @@ def create_app(token: str, db_path: Path) -> FastAPI:
         for s in snaps:
             s["missing"] = cat.missing_for(s["id"])
         return {"project_name": name, "snapshots": snaps}
+
+    @app.websocket("/ws/progress")
+    async def ws_progress(websocket: WebSocket, token: str = ""):
+        if not ws_token_ok(app, token):
+            await websocket.close(code=1008)
+            return
+        await websocket.accept()
+        app.state.hub.bind_loop(asyncio.get_running_loop())
+        q = app.state.hub.subscribe()
+        try:
+            while True:
+                event = await q.get()
+                await websocket.send_json(event)
+        except WebSocketDisconnect:
+            pass
+        finally:
+            app.state.hub.unsubscribe(q)
 
     return app
