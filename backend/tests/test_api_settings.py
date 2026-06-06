@@ -20,3 +20,15 @@ def test_put_settings_persists(tmp_path):
     r = c.put("/api/settings", json=payload)
     assert r.status_code == 200
     assert c.get("/api/settings").json() == payload
+
+
+def test_put_settings_configures_scheduler(tmp_path):
+    app = create_app(token="", db_path=tmp_path / "c.db")
+    c = TestClient(app)
+    with c:  # triggers startup/shutdown events
+        c.put("/api/settings", json={"sources": ["X"], "dest": "Z:/",
+                                     "interval_minutes": 15})
+        assert app.state.scheduler.job_count() == 1
+        c.put("/api/settings", json={"sources": ["X"], "dest": "Z:/",
+                                     "interval_minutes": 0})
+        assert app.state.scheduler.job_count() == 0
