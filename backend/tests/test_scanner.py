@@ -1,4 +1,4 @@
-from ablebackup.scanner import scan_projects
+from ablebackup.scanner import find_als, scan_projects
 from tests.helpers import write_als, fileref_rel
 
 
@@ -47,3 +47,22 @@ def test_scan_skips_unparseable_als(tmp_path):
     names = {r.name for r in results}
     assert "Good" in names
     assert "Bad" not in names
+
+
+def test_scan_emits_progress_events(tmp_path):
+    for n in ("Alpha", "Beta"):
+        proj = tmp_path / f"{n} Project"
+        proj.mkdir()
+        write_als(proj / f"{n}.als", [])
+
+    events = []
+    scan_projects([tmp_path], progress=events.append)
+
+    types = [e["type"] for e in events]
+    assert types[0] == "scan_start"
+    assert types[-1] == "scan_done"
+    assert events[0]["total"] == 2
+    ticks = [e for e in events if e["type"] == "scan_progress"]
+    assert len(ticks) == 2
+    assert ticks[-1]["done"] == 2 and ticks[-1]["total"] == 2
+    assert events[-1]["count"] == 2

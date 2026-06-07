@@ -32,3 +32,11 @@ def test_project_detail_includes_missing(tmp_path):
     assert len(detail["snapshots"]) == 2
     second = [s for s in detail["snapshots"] if s["timestamp"] == "2026-06-02_1000"][0]
     assert second["missing"] == ["x.wav"]
+
+
+def test_project_detail_includes_snapshot_dir(tmp_path):
+    c = _client(tmp_path)
+    c.put("/api/settings", json={"sources": [], "dest": "/Volumes/NAS", "interval_minutes": 0})
+    detail = c.get("/api/projects/Alpha").json()
+    dirs = {s["timestamp"]: s["dir"] for s in detail["snapshots"]}
+    assert dirs["2026-06-01_1000"] == "/Volumes/NAS/AbletonBackups/projects/Alpha/2026-06-01_1000"

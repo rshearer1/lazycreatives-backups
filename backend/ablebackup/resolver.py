@@ -39,12 +39,14 @@ def resolve_refs(refs: list[FileRef], project_dir: Path) -> list[ResolvedRef]:
             if key in seen:
                 continue
             seen.add(key)
+            st = chosen.stat()
             resolved.append(ResolvedRef(
                 name=ref.name or chosen.name,
                 resolved_path=chosen,
                 exists=True,
                 inside_project=_is_inside(chosen, project_dir),
-                size=chosen.stat().st_size,
+                size=st.st_size,
+                mtime=st.st_mtime,
             ))
         else:
             expected = ref.relative_path or ref.absolute_path or ref.name

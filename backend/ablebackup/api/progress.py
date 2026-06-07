@@ -26,17 +26,24 @@ class ProgressHub:
             self._subscribers.remove(q)
 
     async def publish(self, event: dict) -> None:
+        # A new operation starts a fresh history so a late/reconnecting subscriber
+        # replays only the current run, not stale events from previous ones.
+        if event.get("type") in ("scan_start", "backup_start"):
+            self._history = []
         self._record(event)
         for q in list(self._subscribers):
             q.put_nowait(event)
 
     def publish_threadsafe(self, event: dict) -> None:
-        """Publish from a non-loop thread (the backup worker)."""
+        """Publish from a non-loop thread (the scan/backup worker)."""
         if self._loop is None:
             raise RuntimeError("ProgressHub.bind_loop must be called first")
         asyncio.run_coroutine_threadsafe(self.publish(event), self._loop)
 
     def _record(self, event: dict) -> None:
+        # Per-item scan ticks are high-volume and pointless to replay; skip them.
+        if event.get("type") == "scan_progress":
+            return
         self._history.append(event)
         if len(self._history) > self._history_limit:
             self._history = self._history[-self._history_limit:]

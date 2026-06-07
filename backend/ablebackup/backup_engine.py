@@ -68,12 +68,20 @@ def _disambiguate(logical: str, digest: str) -> str:
     return p.with_name(f"{p.stem}.{digest[:8]}{p.suffix}").as_posix()
 
 
-def backup_project(scan: ProjectScan, dest_root: Path, timestamp: str) -> BackupResult:
+def _snapshot_base(dest_root: Path, name: str, timestamp: str, layout: str) -> Path:
+    """The snapshot's folder, per the chosen on-disk organization."""
+    if layout == "date_project":
+        return dest_root / "by-date" / timestamp / name
+    return dest_root / "projects" / name / timestamp
+
+
+def backup_project(scan: ProjectScan, dest_root: Path, timestamp: str,
+                   portable: bool = False, layout: str = "project_date") -> BackupResult:
     """Write one project to dest_root as a deduplicated dated snapshot."""
     pool = dest_root / "_pool"
     use_hardlinks = supports_hardlinks(dest_root)
-    final_dir = dest_root / "projects" / scan.name / timestamp
-    temp_dir = dest_root / "projects" / scan.name / f".{timestamp}.tmp"
+    final_dir = _snapshot_base(dest_root, scan.name, timestamp, layout)
+    temp_dir = final_dir.parent / f".{final_dir.name}.tmp"
     if temp_dir.exists():
         shutil.rmtree(temp_dir)
     temp_dir.mkdir(parents=True)
@@ -116,6 +124,8 @@ def backup_project(scan: ProjectScan, dest_root: Path, timestamp: str) -> Backup
         "total_size": total_size,
         "missing": missing,
         "used_hardlinks": use_hardlinks,
+        "portable": portable,
+        "layout": layout,
     }
     (temp_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
