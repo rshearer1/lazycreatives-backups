@@ -28,7 +28,7 @@
   .lede{color:var(--muted);font-size:18px;max-width:62ch;margin-bottom:34px}
   .player{border:1px solid var(--line);border-radius:18px;overflow:hidden;
     background:#000;box-shadow:0 20px 70px rgba(0,0,0,.5)}
-  video{display:block;width:100%;height:auto}
+  .player iframe{display:block;width:100%;aspect-ratio:16/9;border:0}
   .actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:28px}
   a.btn{text-decoration:none;font-weight:700;font-size:15px;padding:13px 22px;border-radius:11px;
     border:1px solid var(--line);color:var(--ink);background:rgba(255,255,255,.03);transition:.15s}
@@ -61,15 +61,12 @@
   <p class="lede">Verified, deduplicated backups for your music projects — that you own. It finds every session, follows its sounds, and proves each backup actually opens.</p>
 
   <div class="player">
-    <video controls preload="metadata" playsinline>
-      <source src="https://github.com/rshearer1/lazycreatives-backups/releases/latest/download/lazycreatives-pitch.mp4" type="video/mp4">
-      Your browser can't play this video — <a href="https://github.com/rshearer1/lazycreatives-backups/releases/latest/download/lazycreatives-pitch.mp4">download it here</a>.
-    </video>
+    <iframe src="pitch-video.html" title="LazyCreatives Backups — animated pitch" allowfullscreen loading="lazy"></iframe>
   </div>
 
   <div class="actions">
-    <a class="btn primary" href="https://github.com/rshearer1/lazycreatives-backups/releases/latest/download/lazycreatives-pitch.mp4">Download the video</a>
-    <a class="btn" href="pitch-video.html">Watch the animated version</a>
+    <a class="btn primary" href="pitch-video.html">Play the pitch</a>
+    <a class="btn" href="https://github.com/rshearer1/lazycreatives-backups/releases/latest/download/lazycreatives-pitch.mp4">Download the video</a>
     <a class="btn" href="https://github.com/rshearer1/lazycreatives-backups/releases">Releases</a>
     <a class="btn" href="brand/brand-guide.html">Brand guide</a>
   </div>
