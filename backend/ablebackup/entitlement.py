@@ -1,10 +1,15 @@
 """Licensing entitlement — the single source of truth for Free vs Pro features.
 
-The whole app reads features from here. License activation is stubbed with test
-keys for now; the real path is Lemon Squeezy's /v1/licenses/activate (see
-brand/business/paywall-eng-scope.md). Per the plan: one online check at
-activation, then cache + run offline.
+The whole app reads features from here. License activation uses Lemon Squeezy's
+License API when configured (env: LS_PRO_VARIANT / LS_STUDIO_VARIANT, the variant
+ids of your Pro/Studio products), and falls back to built-in test keys otherwise
+so the app is fully usable before the store is live. Per the plan: one online
+check at activation, then cache locally and run offline.
 """
+import json as _json
+import os
+import urllib.parse
+import urllib.request
 
 # Feature gate map (brand/business/paywall-eng-scope.md §1).
 FEATURES = {
@@ -31,12 +36,13 @@ FEATURES = {
 
 VALID_TIERS = tuple(FEATURES)
 
-# Placeholder license keys until Lemon Squeezy is wired. Replace activate_key()
-# with a real LS /v1/licenses/activate call (cache the result locally after).
+# Built-in test keys — used until Lemon Squeezy variant ids are configured.
 _TEST_KEYS = {
     "LC-PRO-DEMO-2026": "pro",
     "LC-STUDIO-DEMO-2026": "studio",
 }
+
+_LS_BASE = "https://api.lemonsqueezy.com/v1/licenses"
 
 
 def features_for(tier: str) -> dict:
@@ -47,9 +53,53 @@ def allows(tier: str, feature: str) -> bool:
     return bool(features_for(tier).get(feature, False))
 
 
-def activate_key(key: str):
-    """Return the tier a license key grants, or None if unrecognised.
+def _variant_to_tier(variant_id) -> str | None:
+    vid = str(variant_id or "")
+    if vid and vid == os.environ.get("LS_STUDIO_VARIANT", ""):
+        return "studio"
+    if vid and vid == os.environ.get("LS_PRO_VARIANT", ""):
+        return "pro"
+    return None
 
-    TODO(payments): replace with Lemon Squeezy License API activation.
+
+def _ls_enabled() -> bool:
+    return bool(os.environ.get("LS_PRO_VARIANT") or os.environ.get("LS_STUDIO_VARIANT"))
+
+
+def _ls_request(path: str, payload: dict) -> dict | None:
+    data = urllib.parse.urlencode(payload).encode()
+    req = urllib.request.Request(
+        _LS_BASE + path, data=data, method="POST",
+        headers={"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as r:
+            return _json.load(r)
+    except Exception:
+        return None  # network/HTTP error — treat as activation failure
+
+
+def activate(key: str) -> dict | None:
+    """Validate + activate a license key. Returns {"tier", "instance_id"} or None.
+
+    Uses Lemon Squeezy's /activate when configured; otherwise the test keys.
     """
-    return _TEST_KEYS.get((key or "").strip().upper())
+    key = (key or "").strip()
+    if not key:
+        return None
+    if _ls_enabled():
+        body = _ls_request("/activate", {"license_key": key, "instance_name": "LazyCreatives Backups"})
+        if not body or not body.get("activated"):
+            return None
+        tier = _variant_to_tier((body.get("meta") or {}).get("variant_id"))
+        if tier is None:
+            return None  # a valid key, but for a product we don't map to a tier
+        return {"tier": tier, "instance_id": (body.get("instance") or {}).get("id")}
+    tier = _TEST_KEYS.get(key.upper())
+    return {"tier": tier, "instance_id": None} if tier else None
+
+
+def deactivate(key: str, instance_id) -> None:
+    """Release a seat on Lemon Squeezy (best-effort). No-op for test keys."""
+    if _ls_enabled() and key and instance_id:
+        _ls_request("/deactivate", {"license_key": key, "instance_id": instance_id})

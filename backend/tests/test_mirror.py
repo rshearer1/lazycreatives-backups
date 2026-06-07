@@ -19,6 +19,15 @@ def test_run_backup_mirrors_snapshot_offsite(tmp_path):
     assert (snap / "Samples" / "loop.wav").read_bytes() == b"loopdata"   # samples too
 
 
+def test_rclone_remote_detection():
+    from ablebackup.service import _is_rclone_remote
+    assert _is_rclone_remote("s3:bucket/path") is True
+    assert _is_rclone_remote("gdrive:Backups") is True
+    assert _is_rclone_remote("rclone:b2:bucket") is True
+    assert _is_rclone_remote("/Users/me/Dropbox") is False
+    assert _is_rclone_remote("/Volumes/NAS/backups") is False
+
+
 def test_mirror_failure_does_not_break_primary(tmp_path):
     proj = tmp_path / "Song Project"
     proj.mkdir()

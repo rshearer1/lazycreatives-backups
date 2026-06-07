@@ -26,6 +26,7 @@ export function Sources() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [nextRun, setNextRun] = useState<string | null>(null);
+  const [rclone, setRclone] = useState<{ available: boolean; remotes: string[] }>({ available: false, remotes: [] });
   const { allows } = useEntitlement();
   const canSchedule = allows("scheduled");
   const canCloud = allows("cloud_backup");
@@ -39,7 +40,7 @@ export function Sources() {
       .then((c) => { setCfg(c); setLoaded(true); })
       .catch(() => setLoadError(true));
   }
-  useEffect(() => { load(); refreshNextRun(); }, []);
+  useEffect(() => { load(); refreshNextRun(); api.rclone().then(setRclone).catch(() => {}); }, []);
 
   async function addSource() {
     const dir = await (window as any).ablebackup.pickFolder();
@@ -55,6 +56,10 @@ export function Sources() {
     if (dir && dir !== cfg.dest && !mirrors.includes(dir)) setCfg({ ...cfg, mirrors: [...mirrors, dir] });
   }
   function removeMirror(m: string) { setCfg({ ...cfg, mirrors: mirrors.filter((x) => x !== m) }); }
+  function addRemote(name: string) {
+    const dest = `${name}:LazyCreatives-Backups`;
+    if (!mirrors.includes(dest)) setCfg({ ...cfg, mirrors: [...mirrors, dest] });
+  }
   function removeSource(s: string) {
     setCfg({ ...cfg, sources: cfg.sources.filter((x) => x !== s) });
   }
@@ -142,6 +147,22 @@ export function Sources() {
                 <button className="linkbtn" onClick={() => removeMirror(m)} style={{ color: "var(--danger)", flexShrink: 0 }}>remove</button>
               </div>
             ))}
+            {rclone.available && rclone.remotes.length > 0 && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
+                <div className="sub" style={{ margin: "0 0 7px", fontSize: 12 }}>Cloud remotes (rclone) — S3, Backblaze B2, Drive, Dropbox…</div>
+                <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                  {rclone.remotes.map((r) => (
+                    <button key={r} className="snapchip" onClick={() => addRemote(r)}
+                      disabled={mirrors.includes(`${r}:LazyCreatives-Backups`)}>+ {r}:</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!rclone.available && (
+              <div className="sub" style={{ marginTop: 10, fontSize: 11.5 }}>
+                Tip: install <strong style={{ color: "var(--text-dim)" }}>rclone</strong> to back up straight to S3, Backblaze B2, Google Drive, Dropbox &amp; 70+ more — no sync app needed.
+              </div>
+            )}
           </>
         ) : (
           <div className="locked-note" style={{ marginTop: 6 }}>

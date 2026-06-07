@@ -1,7 +1,9 @@
 """Orchestration layer: reusable scan/backup over the engine, with progress events."""
 import hashlib
 import os
+import re
 import shutil
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
@@ -46,23 +48,61 @@ def project_signature(scan: ProjectScan) -> str:
     return h.hexdigest()
 
 
+def _is_rclone_remote(dest: str) -> bool:
+    """An offsite target is an rclone remote (e.g. s3:bucket/path, gdrive:Backups)
+    rather than a local folder. Local POSIX paths start with '/'."""
+    if dest.startswith("rclone:"):
+        return True
+    return not os.path.isabs(dest) and bool(re.match(r"^[\w-]+:", dest))
+
+
+def rclone_available() -> bool:
+    return shutil.which("rclone") is not None
+
+
+def rclone_remotes() -> list[str]:
+    """Configured rclone remote names (without the trailing ':'), or [] if none."""
+    if not rclone_available():
+        return []
+    try:
+        out = subprocess.run(["rclone", "listremotes"], capture_output=True, text=True, timeout=10)
+        return [r.rstrip(":") for r in out.stdout.split() if r.strip()]
+    except (OSError, subprocess.SubprocessError):
+        return []
+
+
+def _rclone_copy(src: Path, remote_dest: str) -> bool:
+    try:
+        r = subprocess.run(["rclone", "copy", str(src), remote_dest, "--quiet"],
+                           capture_output=True, text=True, timeout=3600)
+        return r.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 def mirror_snapshot(snapshot_dir: Path, base: Path, mirrors: list) -> int:
     """Copy a freshly-written snapshot to each offsite/cloud destination as a
-    standalone copy. Best-effort: a mirror failure never fails the primary backup.
-    Returns how many mirrors received it."""
+    standalone copy. A mirror may be a local/sync folder OR an rclone remote
+    (s3:, b2:, gdrive:, …). Best-effort: a mirror failure never fails the primary
+    backup. Returns how many mirrors received it."""
     done = 0
     try:
         rel = Path(snapshot_dir).resolve().relative_to(Path(base).resolve())
     except ValueError:
         return 0
     for m in mirrors:
-        target = Path(m) / rel
         try:
-            if target.exists():
-                done += 1
-                continue
-            shutil.copytree(snapshot_dir, target)
-            done += 1
+            if _is_rclone_remote(m):
+                remote = m[len("rclone:"):] if m.startswith("rclone:") else m
+                if _rclone_copy(snapshot_dir, f"{remote.rstrip('/')}/{rel.as_posix()}"):
+                    done += 1
+            else:
+                target = Path(m) / rel
+                if target.exists():
+                    done += 1
+                else:
+                    shutil.copytree(snapshot_dir, target)
+                    done += 1
         except OSError:
             pass  # offsite is best-effort (drive unplugged, cloud folder busy, …)
     return done
@@ -291,7 +331,7 @@ def run_backup(sources: list[Path], dest: Path, catalog: Catalog,
         )
         ok_count += 1
         if mirrors:  # also copy this snapshot offsite (cloud/2nd drive) — best-effort
-            mirror_snapshot(result.snapshot_dir, base, [Path(m) for m in mirrors])
+            mirror_snapshot(result.snapshot_dir, base, [str(m) for m in mirrors])
         _emit(progress, {"type": "project_done", "index": i,
                          "project_name": result.project_name,
                          "file_count": result.file_count,

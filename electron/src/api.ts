@@ -55,6 +55,7 @@ export function makeApi() {
     async snapshotFiles(id: number): Promise<SnapshotFilesResult> {
       return req("GET", `/api/snapshot/${id}/files`);
     },
+    async rclone(): Promise<{ available: boolean; remotes: string[] }> { return req("GET", "/api/rclone"); },
     async entitlement(): Promise<Entitlement> { return req("GET", "/api/entitlement"); },
     async activateLicense(key: string): Promise<Entitlement> { return req("POST", "/api/entitlement/activate", { key }); },
     async deactivateLicense(): Promise<Entitlement> { return req("POST", "/api/entitlement/deactivate"); },

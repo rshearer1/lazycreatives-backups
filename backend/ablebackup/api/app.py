@@ -16,8 +16,8 @@ from ablebackup.api.schemas import ActivateRequest, BackupRequest, Config, Resto
 from ablebackup.catalog import Catalog
 from ablebackup.scheduler import BackupScheduler
 from ablebackup.service import (
-    build_overview, default_timestamp, pool_cache_age, refresh_pool_cache,
-    restore_snapshot, run_backup, scan_summary,
+    build_overview, default_timestamp, pool_cache_age, rclone_available,
+    rclone_remotes, refresh_pool_cache, restore_snapshot, run_backup, scan_summary,
 )
 from ablebackup.verifier import verify_snapshot
 
@@ -82,6 +82,10 @@ def create_app(token: str, db_path: Path) -> FastAPI:
     def _allows(feature: str) -> bool:
         return entitlement.allows(_tier(), feature)
 
+    @app.get("/api/rclone", dependencies=[Depends(require_token)])
+    def rclone_info():
+        return {"available": rclone_available(), "remotes": rclone_remotes()}
+
     @app.get("/api/entitlement", dependencies=[Depends(require_token)])
     def get_entitlement():
         tier = _tier()
@@ -89,14 +93,18 @@ def create_app(token: str, db_path: Path) -> FastAPI:
 
     @app.post("/api/entitlement/activate", dependencies=[Depends(require_token)])
     def activate(req: ActivateRequest):
-        tier = entitlement.activate_key(req.key)
-        if tier is None:
+        res = entitlement.activate(req.key)
+        if res is None or res.get("tier") is None:
             raise HTTPException(status_code=400, detail="That licence key wasn't recognised.")
-        app.state.catalog.set_setting("entitlement", {"tier": tier, "key": req.key.strip().upper()})
-        return {"tier": tier, "features": entitlement.features_for(tier)}
+        app.state.catalog.set_setting("entitlement", {
+            "tier": res["tier"], "key": req.key.strip(), "instance_id": res.get("instance_id"),
+        })
+        return {"tier": res["tier"], "features": entitlement.features_for(res["tier"])}
 
     @app.post("/api/entitlement/deactivate", dependencies=[Depends(require_token)])
     def deactivate():
+        ent = app.state.catalog.get_setting("entitlement") or {}
+        entitlement.deactivate(ent.get("key", ""), ent.get("instance_id"))  # release the seat
         app.state.catalog.set_setting("entitlement", {"tier": "free"})
         app.state.scheduler.set_interval(0)  # automatic backup is Pro-only
         return {"tier": "free", "features": entitlement.features_for("free")}
