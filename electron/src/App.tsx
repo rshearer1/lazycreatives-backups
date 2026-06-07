@@ -5,6 +5,7 @@ import { Home } from "./screens/Home";
 import { Sources } from "./screens/Sources";
 import { BackupFlow } from "./screens/BackupFlow";
 import { Browse } from "./screens/Browse";
+import { BrandMark } from "./components/BrandMark";
 import { makeApi } from "./api";
 import { useLiveProgress } from "./useProgress";
 import type { Config, ProjectSummary } from "./types";
@@ -56,7 +57,14 @@ export default function App() {
     prevDone.current = live.backup.done;
   }, [live.backup.done, live.backup.completed, live.backup.errors, live.backup.cancelled]);
 
-  if (cfg === null) return <div className="splash">Loading…</div>;
+  if (cfg === null) return (
+    <div className="splash">
+      <div style={{ display: "grid", placeItems: "center", gap: 14 }}>
+        <div style={{ width: 56, height: 62 }}><BrandMark active /></div>
+        <span className="sub" style={{ margin: 0 }}>Starting…</span>
+      </div>
+    </div>
+  );
   if (cfg === "error") {
     return (
       <div className="splash">

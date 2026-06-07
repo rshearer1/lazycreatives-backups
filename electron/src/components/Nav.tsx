@@ -1,4 +1,5 @@
 import type { Tab } from "../App";
+import { BrandMark } from "./BrandMark";
 
 function Icon({ path }: { path: string }) {
   return (
@@ -28,7 +29,7 @@ export function Nav({ tab, onNavigate, busy, flowActive }: {
     <nav className="nav">
       <div className="nav__brand">
         <div className="nav__logo" title="LazyCreatives Backups">
-          <span className={`eq${busy ? " eq--on" : ""}`} aria-hidden><i /><i /><i /><i /></span>
+          <BrandMark active={busy} />
         </div>
         <span className="nav__brandname">LazyCreatives Backups</span>
       </div>
