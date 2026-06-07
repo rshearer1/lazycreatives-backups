@@ -26,6 +26,15 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 """
 
+# Indexes for the columns we filter/join/group on. missing_refs.snapshot_id is the
+# join key for every history lookup; project_name/project_id back the dashboard's
+# latest-per-project and signature aggregations. Created after _migrate adds columns.
+_INDEXES = """
+CREATE INDEX IF NOT EXISTS idx_missing_snapshot ON missing_refs(snapshot_id);
+CREATE INDEX IF NOT EXISTS idx_snapshots_project_name ON snapshots(project_name);
+CREATE INDEX IF NOT EXISTS idx_snapshots_project_id ON snapshots(project_id);
+"""
+
 
 class Catalog:
     def __init__(self, db_path: Path):
@@ -36,7 +45,8 @@ class Catalog:
         self.conn.row_factory = sqlite3.Row
         self._lock = threading.Lock()
         self.conn.executescript(_SCHEMA)
-        self._migrate()
+        self._migrate()  # add post-release columns (e.g. project_id) before indexing them
+        self.conn.executescript(_INDEXES)
         self.conn.commit()
 
     def _migrate(self) -> None:
@@ -107,6 +117,25 @@ class Catalog:
                 (snapshot_id,),
             ).fetchall()
         return [r["expected_path"] for r in rows]
+
+    def missing_for_snapshots(self, snapshot_ids) -> dict[int, list[str]]:
+        """Missing-ref paths for many snapshots in one query (avoids the N+1 of
+        calling missing_for per row). Returns {snapshot_id: [paths]}; ids with no
+        missing refs are simply absent from the map."""
+        ids = list(snapshot_ids)
+        out: dict[int, list[str]] = {}
+        if not ids:
+            return out
+        placeholders = ",".join("?" * len(ids))
+        with self._lock:
+            rows = self.conn.execute(
+                f"SELECT snapshot_id, expected_path FROM missing_refs "
+                f"WHERE snapshot_id IN ({placeholders})",
+                ids,
+            ).fetchall()
+        for r in rows:
+            out.setdefault(r["snapshot_id"], []).append(r["expected_path"])
+        return out
 
     def set_setting(self, key, value) -> None:
         with self._lock:
