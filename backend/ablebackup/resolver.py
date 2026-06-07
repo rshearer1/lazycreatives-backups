@@ -22,6 +22,9 @@ def _is_inside(path: Path, project_dir: Path) -> bool:
 
 def resolve_refs(refs: list[FileRef], project_dir: Path) -> list[ResolvedRef]:
     resolved: list[ResolvedRef] = []
+    # A sample used by N clips appears as N identical FileRefs; collapse them so
+    # counts and sizes reflect unique files, not how many times each is triggered.
+    seen: set[str] = set()
     for ref in refs:
         chosen: Path | None = None
         for cand in _candidates(ref, project_dir):
@@ -32,6 +35,10 @@ def resolve_refs(refs: list[FileRef], project_dir: Path) -> list[ResolvedRef]:
                 chosen = cand
                 break
         if chosen is not None:
+            key = str(chosen.resolve())
+            if key in seen:
+                continue
+            seen.add(key)
             resolved.append(ResolvedRef(
                 name=ref.name or chosen.name,
                 resolved_path=chosen,
@@ -40,12 +47,16 @@ def resolve_refs(refs: list[FileRef], project_dir: Path) -> list[ResolvedRef]:
                 size=chosen.stat().st_size,
             ))
         else:
+            expected = ref.relative_path or ref.absolute_path or ref.name
+            if f"missing::{expected}" in seen:
+                continue
+            seen.add(f"missing::{expected}")
             resolved.append(ResolvedRef(
                 name=ref.name,
                 resolved_path=None,
                 exists=False,
                 inside_project=False,
                 size=0,
-                expected_path=ref.relative_path or ref.absolute_path or ref.name,
+                expected_path=expected,
             ))
     return resolved

@@ -46,3 +46,28 @@ def test_missing_ref_is_flagged_not_fatal(tmp_path):
     assert resolved[0].exists is False
     assert resolved[0].resolved_path is None
     assert resolved[0].size == 0
+
+
+def test_dedupes_repeated_sample_refs(tmp_path):
+    # One sample triggered by several clips -> several identical FileRefs; count once.
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    ext = tmp_path / "kick.wav"
+    ext.write_bytes(b"kick")
+    refs = [FileRef(name="kick.wav", absolute_path=str(ext))] * 3
+
+    resolved = resolve_refs(refs, project_dir=proj)
+
+    assert len(resolved) == 1
+    assert resolved[0].size == 4
+
+
+def test_dedupes_repeated_missing_refs(tmp_path):
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    refs = [FileRef(name="gone.wav", relative_path="Samples/gone.wav")] * 4
+
+    resolved = resolve_refs(refs, project_dir=proj)
+
+    assert len(resolved) == 1
+    assert resolved[0].exists is False
