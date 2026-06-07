@@ -65,6 +65,7 @@ export interface Overview {
   logical_size: number;
   actual_size: number;
   saved_bytes: number;
+  pool_known: boolean;
   last_run: string | null;
   last_run_ok: boolean;
   attention: AttentionItem[];

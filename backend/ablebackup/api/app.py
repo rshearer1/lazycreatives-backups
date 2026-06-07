@@ -14,7 +14,8 @@ from ablebackup.api.schemas import BackupRequest, Config, RestoreRequest, ScanRe
 from ablebackup.catalog import Catalog
 from ablebackup.scheduler import BackupScheduler
 from ablebackup.service import (
-    build_overview, default_timestamp, restore_snapshot, run_backup, scan_summary,
+    build_overview, default_timestamp, pool_cache_age, refresh_pool_cache,
+    restore_snapshot, run_backup, scan_summary,
 )
 from ablebackup.verifier import verify_snapshot
 
@@ -50,6 +51,22 @@ def create_app(token: str, db_path: Path) -> FastAPI:
     app.state.scheduler = scheduler
     app.state.jobs = {}
     app.state.cancels = {}  # job_id -> threading.Event, to cancel a running backup
+    app.state.pool_refreshing = False  # guard so only one pool-size walk runs at a time
+    app.state.pool_task = None          # keep a ref so the task isn't GC'd mid-run
+
+    def _refresh_pool_async(dest: str):
+        """Recompute the cached pool size off the event loop, without overlapping."""
+        if not dest or app.state.pool_refreshing:
+            return
+
+        async def _run():
+            app.state.pool_refreshing = True
+            try:
+                await asyncio.to_thread(refresh_pool_cache, app.state.catalog, dest)
+            finally:
+                app.state.pool_refreshing = False
+
+        app.state.pool_task = asyncio.create_task(_run())
 
     @app.get("/health")
     def health():
@@ -102,6 +119,7 @@ def create_app(token: str, db_path: Path) -> FastAPI:
                 run_backup, sources, dest, cat, timestamp, progress, als_paths,
                 label, portable, layout, find_missing, libraries, cancel.is_set)
             app.state.jobs[job_id] = {"state": "done", "result": result}
+            _refresh_pool_async(str(dest))  # the pool grew — recompute the cached size
         except Exception as e:  # pragma: no cover - defensive
             app.state.jobs[job_id] = {"state": "error", "error": str(e)}
         finally:
@@ -143,9 +161,17 @@ def create_app(token: str, db_path: Path) -> FastAPI:
         return {"cancelling": True}
 
     @app.get("/api/overview", dependencies=[Depends(require_token)])
-    def overview():
+    async def overview():
         cfg = app.state.catalog.get_setting("config") or {}
-        data = build_overview(app.state.catalog, cfg.get("dest", ""))
+        dest = cfg.get("dest", "")
+        # build_overview reads cached figures (fast), but disk_usage on the NAS can
+        # block briefly — keep it off the event loop.
+        data = await asyncio.to_thread(build_overview, app.state.catalog, dest)
+        # Returns instantly from cache; kick off a background walk if it's missing
+        # or stale (>2 min) so the figures stay current without blocking the load.
+        age = pool_cache_age(app.state.catalog)
+        if dest and (age is None or age > 120):
+            _refresh_pool_async(dest)
         interval = cfg.get("interval_minutes", 0) or 0
         data["schedule"] = {
             "enabled": interval > 0,

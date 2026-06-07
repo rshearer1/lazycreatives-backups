@@ -30,6 +30,14 @@ export function Home({ backup, onBackupNow, onOpenSettings, onResumeProgress }: 
   // Refetch whenever a backup finishes so the tiles update.
   useEffect(() => { api.overview().then(setOv).catch(() => setErr(true)); }, [backup.done]);
 
+  // The pool size is computed in the background the first time; poll until it lands.
+  useEffect(() => {
+    if (ov && !ov.pool_known) {
+      const t = setTimeout(() => api.overview().then(setOv).catch(() => {}), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [ov]);
+
   if (err) return (
     <>
       <PageHeader title="Home" />
@@ -75,8 +83,8 @@ export function Home({ backup, onBackupNow, onOpenSettings, onResumeProgress }: 
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 18 }}>
             <Tile label="Protected" value={`${ov.projects_protected} projects`} hint={`${ov.snapshot_count} snapshots`} />
-            <Tile label="On NAS" value={fmtSize(ov.actual_size)} hint={ov.nas.reachable ? `${fmtSize(ov.nas.free_bytes)} free` : "NAS offline"} />
-            <Tile label="Saved by dedup" value={fmtSize(ov.saved_bytes)} hint={savedPct > 0 ? `${savedPct}% smaller` : "—"} tone="var(--accent-2)" />
+            <Tile label="On NAS" value={ov.pool_known ? fmtSize(ov.actual_size) : "calculating…"} hint={ov.nas.reachable ? `${fmtSize(ov.nas.free_bytes)} free` : "NAS offline"} />
+            <Tile label="Saved by dedup" value={ov.pool_known ? fmtSize(ov.saved_bytes) : "…"} hint={ov.pool_known && savedPct > 0 ? `${savedPct}% smaller` : "—"} tone="var(--accent-2)" />
             <Tile label="Last backup" value={fmtDate(ov.last_run)} hint={ov.last_run_ok ? "✓ all ok" : "⚠ check results"} tone={ov.last_run_ok ? undefined : "var(--warn)"} />
           </div>
 
