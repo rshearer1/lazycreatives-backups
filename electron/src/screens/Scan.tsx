@@ -131,7 +131,9 @@ export function Scan({ projects, onProjects, scan, onReview }: {
             <input type="checkbox" checked={isSel} onChange={() => toggle(p.als_path)} style={{ marginTop: 3 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <strong style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</strong>
+                <strong style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="daw-badge">{p.daw === "flstudio" ? "FL" : "Live"}</span>{p.name}
+                </strong>
                 <span className="sub mono" style={{ margin: 0, whiteSpace: "nowrap" }}>
                   {p.present_count} sample{p.present_count === 1 ? "" : "s"} · {fmtSize(p.total_size)}
                 </span>
