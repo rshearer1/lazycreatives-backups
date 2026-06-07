@@ -3,6 +3,8 @@ const crypto = require("crypto");
 const net = require("net");
 const http = require("http");
 
+const IS_WIN = process.platform === "win32";
+
 function freePort() {
   return new Promise((resolve, reject) => {
     const srv = net.createServer();
@@ -33,7 +35,23 @@ function waitForHealth(port, timeoutMs = 15000) {
   });
 }
 
-async function startSidecar({ backendDir, dbPath, pythonCmd = "python" }) {
+// Signal the sidecar's whole process group (POSIX) or process tree (Windows) so no
+// uvicorn worker/thread is left behind. Negative pid targets the group, which the
+// child leads thanks to `detached`. Swallows ESRCH (the process is already gone).
+function killGroup(proc, signal) {
+  if (!proc || proc.exitCode !== null || proc.signalCode !== null) return;
+  try {
+    if (IS_WIN) {
+      spawn("taskkill", ["/pid", String(proc.pid), "/t", "/f"]);
+    } else {
+      process.kill(-proc.pid, signal);
+    }
+  } catch {
+    try { proc.kill(signal); } catch { /* already dead */ }
+  }
+}
+
+async function startSidecar({ backendDir, dbPath, pythonCmd = "python", parentPid = process.pid }) {
   const token = crypto.randomBytes(24).toString("hex");
   const port = await freePort();
   const env = {
@@ -41,14 +59,50 @@ async function startSidecar({ backendDir, dbPath, pythonCmd = "python" }) {
     ABLEBACKUP_TOKEN: token,
     ABLEBACKUP_PORT: String(port),
     ABLEBACKUP_DB: dbPath,
+    // The sidecar watches this pid and exits if we die without cleaning it up
+    // (e.g. an Electron crash), so it can never become an orphan.
+    ABLEBACKUP_PARENT_PID: String(parentPid),
   };
   const proc = spawn(pythonCmd, ["-m", "ablebackup.server"], {
-    cwd: backendDir, env, stdio: ["ignore", "pipe", "pipe"],
+    cwd: backendDir,
+    env,
+    stdio: ["ignore", "pipe", "pipe"],
+    // Lead a new process group (POSIX) so we can signal the whole subtree on quit.
+    detached: !IS_WIN,
   });
   proc.stdout.on("data", (d) => console.log("[sidecar]", d.toString().trim()));
   proc.stderr.on("data", (d) => console.error("[sidecar]", d.toString().trim()));
+  const sidecar = { proc, token, port, stopped: false };
+  proc.on("exit", () => { sidecar.stopped = true; });
   await waitForHealth(port);
-  return { proc, token, port };
+  return sidecar;
 }
 
-module.exports = { startSidecar, freePort, waitForHealth };
+// Stop the sidecar: ask politely (SIGTERM to the group), then force-kill (SIGKILL) if
+// it has not exited within graceMs. Resolves once the process is gone (or the backstop
+// fires) so a quit handler can await it without ever hanging. `kill` is injectable for
+// tests.
+function stopSidecar(sidecar, { graceMs = 3000, kill = killGroup } = {}) {
+  return new Promise((resolve) => {
+    const proc = sidecar && sidecar.proc;
+    if (!proc || sidecar.stopped || proc.exitCode !== null || proc.signalCode !== null) {
+      resolve();
+      return;
+    }
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(forceTimer);
+      clearTimeout(backstopTimer);
+      resolve();
+    };
+    proc.once("exit", finish);
+    kill(proc, "SIGTERM");
+    const forceTimer = setTimeout(() => kill(proc, "SIGKILL"), graceMs);
+    // Absolute backstop: never let a quit block forever even if 'exit' never fires.
+    const backstopTimer = setTimeout(finish, graceMs + 2000);
+  });
+}
+
+module.exports = { startSidecar, stopSidecar, killGroup, freePort, waitForHealth };
