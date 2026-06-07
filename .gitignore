@@ -11,6 +11,13 @@ backend/build/
 
 electron/node_modules/
 electron/dist/
+electron/release/
+
+# PyInstaller sidecar build output
+backend/dist/
 
 # large binary — keep the pitch video out of git
 lazycreatives-pitch.mp4
+
+# internal business docs — local only, never publish (strategy + financials)
+brand/business/
