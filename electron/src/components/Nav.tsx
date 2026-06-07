@@ -1,4 +1,4 @@
-import type { Screen } from "../App";
+import type { Tab } from "../App";
 
 function Icon({ path }: { path: string }) {
   return (
@@ -9,24 +9,20 @@ function Icon({ path }: { path: string }) {
   );
 }
 
-const ICONS: Record<string, string> = {
-  dashboard: "M4 4h7v7H4zM13 4h7v4h-7zM13 11h7v9h-7zM4 13h7v7H4z",
-  sources: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
-  scan: "M3 12a9 9 0 1 0 9-9 M12 12l5-3 M12 12v0 M12 7v0",
-  backup: "M3 12h4l2 5 4-12 2 7h6",
-  browse: "M3 8l9-4 9 4-9 4-9-4z M3 8v8l9 4 9-4V8",
+const ICONS: Record<Tab, string> = {
+  home: "M3 11l9-8 9 8 M5 10v10h5v-6h4v6h5V10",
+  history: "M3 8l9-4 9 4-9 4-9-4z M3 8v8l9 4 9-4V8",
+  settings: "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6 M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.3 1a7 7 0 0 0-1.7-1l-.4-2.5H9.5L9 4.5a7 7 0 0 0-1.7 1l-2.3-1-2 3.4L5 11a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.5 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.6a7 7 0 0 0 .1-1z",
 };
 
-const ITEMS: { id: Screen; label: string }[] = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "sources", label: "Sources & NAS" },
-  { id: "scan", label: "Scan & Back up" },
-  { id: "backup", label: "Progress" },
-  { id: "browse", label: "Browse" },
+const ITEMS: { id: Tab; label: string }[] = [
+  { id: "home", label: "Home" },
+  { id: "history", label: "History" },
+  { id: "settings", label: "Settings" },
 ];
 
-export function Nav({ screen, onNavigate, busy }: {
-  screen: Screen; onNavigate: (s: Screen) => void; busy?: boolean;
+export function Nav({ tab, onNavigate, busy, flowActive }: {
+  tab: Tab; onNavigate: (t: Tab) => void; busy?: boolean; flowActive?: boolean;
 }) {
   return (
     <nav className="nav">
@@ -36,10 +32,10 @@ export function Nav({ screen, onNavigate, busy }: {
       </div>
       {ITEMS.map((it) => (
         <button key={it.id} onClick={() => onNavigate(it.id)}
-          className={`nav__item${screen === it.id ? " nav__item--active" : ""}`}>
+          className={`nav__item${tab === it.id && !flowActive ? " nav__item--active" : ""}`}>
           <Icon path={ICONS[it.id]} />
           {it.label}
-          {it.id === "backup" && busy && <span className="nav__dot" />}
+          {it.id === "home" && busy && <span className="nav__dot" />}
         </button>
       ))}
     </nav>
