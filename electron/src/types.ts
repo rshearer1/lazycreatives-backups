@@ -8,6 +8,7 @@ export interface ProjectSummary {
   missing_count: number;
   missing: string[];
   total_size: number;
+  mtime: number;
 }
 export interface Config {
   sources: string[];

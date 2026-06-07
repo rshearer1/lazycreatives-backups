@@ -40,6 +40,7 @@ export function Browse() {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [query, setQuery] = useState("");
   const [dawFilter, setDawFilter] = useState("all");
+  const [sortKey, setSortKey] = useState<"recent" | "name" | "size" | "snapshots">("recent");
   const [active, setActive] = useState<string | null>(null);
   const [snaps, setSnaps] = useState<Snapshot[]>([]);
   const [selId, setSelId] = useState<number | null>(null);
@@ -67,9 +68,18 @@ export function Browse() {
   }, [selId]);
 
   const daws = useMemo(() => Array.from(new Set(projects.map((p) => p.daw).filter(Boolean))) as string[], [projects]);
-  const filtered = projects.filter((p) =>
-    (dawFilter === "all" || p.daw === dawFilter) &&
-    p.project_name.toLowerCase().includes(query.toLowerCase()));
+  const filtered = useMemo(() => {
+    const f = projects.filter((p) =>
+      (dawFilter === "all" || p.daw === dawFilter) &&
+      p.project_name.toLowerCase().includes(query.toLowerCase()));
+    const cmp = {
+      recent: (a: ProjectRow, b: ProjectRow) => (b.last_timestamp || "").localeCompare(a.last_timestamp || ""),
+      name: (a: ProjectRow, b: ProjectRow) => a.project_name.localeCompare(b.project_name),
+      size: (a: ProjectRow, b: ProjectRow) => b.total_size - a.total_size,
+      snapshots: (a: ProjectRow, b: ProjectRow) => b.snapshot_count - a.snapshot_count,
+    }[sortKey];
+    return [...f].sort(cmp);
+  }, [projects, dawFilter, query, sortKey]);
   const sel = snaps.find((s) => s.id === selId) || null;
 
   const groups = useMemo(() => {
@@ -121,7 +131,13 @@ export function Browse() {
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center" }}>
         <input className="input" placeholder="Search projects…" value={query}
-          onChange={(e) => setQuery(e.target.value)} style={{ flex: 1, maxWidth: 280 }} />
+          onChange={(e) => setQuery(e.target.value)} style={{ flex: 1, maxWidth: 240 }} />
+        <select className="input" value={sortKey} onChange={(e) => setSortKey(e.target.value as typeof sortKey)} style={{ width: "auto" }}>
+          <option value="recent">Recently backed up</option>
+          <option value="name">Name (A–Z)</option>
+          <option value="size">Size</option>
+          <option value="snapshots">Most snapshots</option>
+        </select>
         {daws.length > 1 && (
           <div className="seg">
             <button className={`seg__opt${dawFilter === "all" ? " seg__opt--on" : ""}`} onClick={() => setDawFilter("all")}>All</button>

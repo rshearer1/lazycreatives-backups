@@ -298,6 +298,17 @@ select { cursor: pointer; }
   }
 }
 
+/* ---- Scan toolbar + folder groups ---- */
+.toolchk { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.foldergroup__head { display: flex; align-items: center; gap: 9px; padding: 7px 4px; }
+.foldergroup__title {
+  flex: 1; display: flex; align-items: center; gap: 9px; background: none; border: none;
+  color: var(--text); font: inherit; font-weight: 650; font-size: 13.5px; cursor: pointer;
+  text-align: left; padding: 2px 4px; border-radius: 6px;
+}
+.foldergroup__title:hover { background: var(--surface-2); }
+.foldergroup__title .sub { margin-left: auto; }
+
 /* ---- History: snapshot chips + file browser ---- */
 .snapchip {
   padding: 6px 11px; border-radius: 8px; border: 1px solid var(--border);

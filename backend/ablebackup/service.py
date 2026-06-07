@@ -181,6 +181,7 @@ def scan_summary(sources: list[Path], progress: ProgressCb = None,
             "missing_count": len(p.missing),
             "missing": [r.expected_path or r.name for r in p.missing],
             "total_size": p.total_size,
+            "mtime": p.mtime,  # for "recently modified" sorting in the UI
         })
     return out
 
