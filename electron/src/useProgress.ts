@@ -16,6 +16,7 @@ export interface BackupProgress {
   errors: number;
   current: string | null;
   done: boolean;
+  cancelled: boolean;
   log: string[];
 }
 export interface LiveProgress {
@@ -26,7 +27,7 @@ export interface LiveProgress {
 export function initialProgress(): LiveProgress {
   return {
     scan: { active: false, done: 0, total: 0, current: null },
-    backup: { active: false, preparing: false, total: 0, completed: 0, skipped: 0, errors: 0, current: null, done: false, log: [] },
+    backup: { active: false, preparing: false, total: 0, completed: 0, skipped: 0, errors: 0, current: null, done: false, cancelled: false, log: [] },
   };
 }
 
@@ -39,11 +40,11 @@ export function reduceProgress(s: LiveProgress, ev: ProgressEvent): LiveProgress
     case "scan_done":
       return { ...s, scan: { active: false, done: 0, total: 0, current: null } };
     case "backup_preparing":
-      return { ...s, backup: { active: true, preparing: true, total: 0, completed: 0, skipped: 0, errors: 0, current: null, done: false, log: ["Preparing… resolving projects"] } };
+      return { ...s, backup: { active: true, preparing: true, total: 0, completed: 0, skipped: 0, errors: 0, current: null, done: false, cancelled: false, log: ["Preparing… resolving projects"] } };
     case "backup_start":
       return {
         ...s,
-        backup: { ...s.backup, active: true, preparing: false, total: ev.project_count, completed: 0, skipped: 0, errors: 0, current: null, done: false, log: [`Backing up ${ev.project_count} project(s)…`] },
+        backup: { ...s.backup, active: true, preparing: false, total: ev.project_count, completed: 0, skipped: 0, errors: 0, current: null, done: false, cancelled: false, log: [`Backing up ${ev.project_count} project(s)…`] },
       };
     case "project_start":
       return { ...s, backup: { ...s.backup, current: ev.project_name, log: [...s.backup.log, `→ ${ev.project_name}`] } };
@@ -60,7 +61,10 @@ export function reduceProgress(s: LiveProgress, ev: ProgressEvent): LiveProgress
     case "project_error":
       return { ...s, backup: { ...s.backup, errors: s.backup.errors + 1, current: null, log: [...s.backup.log, `✗ ${ev.project_name}: ${ev.error}`] } };
     case "backup_done":
-      return { ...s, backup: { ...s.backup, active: false, preparing: false, done: true, log: [...s.backup.log, `Done — ${ev.ok_count} backed up, ${ev.skipped_count} unchanged, ${ev.error_count} error(s).`] } };
+      return { ...s, backup: { ...s.backup, active: false, preparing: false, done: true, cancelled: !!ev.cancelled,
+        log: [...s.backup.log, ev.cancelled
+          ? `Cancelled — ${ev.ok_count} backed up, ${ev.skipped_count} unchanged so far.`
+          : `Done — ${ev.ok_count} backed up, ${ev.skipped_count} unchanged, ${ev.error_count} error(s).`] } };
     default:
       return s;
   }

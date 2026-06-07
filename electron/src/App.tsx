@@ -23,6 +23,7 @@ export default function App() {
   // Scan results + the pending backup selection live here so they survive navigation.
   const [scanProjects, setScanProjects] = useState<ProjectSummary[] | null>(null);
   const [pending, setPending] = useState<PendingBackup | null>(null);
+  const [activeJob, setActiveJob] = useState<string | null>(null);
   const live = useLiveProgress();
 
   // Fire a single OS notification when a backup finishes, from anywhere in the app.
@@ -56,11 +57,11 @@ export default function App() {
           {screen === "review" && (
             <Review
               pending={pending}
-              onStarted={() => setScreen("backup")}
+              onStarted={(jobId) => { setActiveJob(jobId); setScreen("backup"); }}
               onCancel={() => setScreen("scan")}
             />
           )}
-          {screen === "backup" && <Backup progress={live.backup} />}
+          {screen === "backup" && <Backup progress={live.backup} jobId={activeJob} />}
           {screen === "browse" && <Browse />}
         </div>
       </div>

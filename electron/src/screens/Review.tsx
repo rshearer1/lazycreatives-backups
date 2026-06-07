@@ -10,7 +10,7 @@ const api = makeApi();
 
 export function Review({ pending, onStarted, onCancel }: {
   pending: PendingBackup | null;
-  onStarted: () => void;
+  onStarted: (jobId: string) => void;
   onCancel: () => void;
 }) {
   const [cfg, setCfg] = useState<Config | null>(null);
@@ -39,13 +39,13 @@ export function Review({ pending, onStarted, onCancel }: {
   async function start() {
     setStarting(true); setErr(null);
     try {
-      await api.startBackup({
+      const { job_id } = await api.startBackup({
         als_paths: pending!.als_paths,
         label: label.trim() || undefined,
         portable, layout,
         find_missing: pending!.findMissing,
       });
-      onStarted();
+      onStarted(job_id);
     } catch (e: any) { setErr(e.message); setStarting(false); }
   }
 

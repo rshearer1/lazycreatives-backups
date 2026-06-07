@@ -83,7 +83,7 @@ export type ProgressEvent =
   | { type: "project_done"; index: number; project_name: string; file_count: number; missing_count: number }
   | { type: "project_skipped"; index: number; project_name: string }
   | { type: "project_error"; index: number; project_name: string; error: string }
-  | { type: "backup_done"; ok_count: number; error_count: number; skipped_count: number };
+  | { type: "backup_done"; ok_count: number; error_count: number; skipped_count: number; cancelled?: boolean };
 
 export interface BackupOptions {
   als_paths?: string[];
