@@ -42,19 +42,24 @@ class Catalog:
     def _migrate(self) -> None:
         # Add columns introduced after the first release to pre-existing catalogs.
         cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(snapshots)")}
-        for col in ("label", "dir", "signature"):
+        new = {"label": "TEXT", "dir": "TEXT", "signature": "TEXT",
+               "relinked_count": "INTEGER", "verified": "INTEGER", "verified_at": "TEXT"}
+        for col, typ in new.items():
             if col not in cols:
-                self.conn.execute(f"ALTER TABLE snapshots ADD COLUMN {col} TEXT")
+                self.conn.execute(f"ALTER TABLE snapshots ADD COLUMN {col} {typ}")
 
     def record_snapshot(self, project_name, timestamp, total_size,
                         file_count, status, missing, error=None,
-                        label=None, dir="", signature="") -> int:
+                        label=None, dir="", signature="", relinked_count=0,
+                        verified=0, verified_at=None) -> int:
         with self._lock:
             cur = self.conn.execute(
                 "INSERT INTO snapshots "
-                "(project_name, timestamp, total_size, file_count, status, error, label, dir, signature) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (project_name, timestamp, total_size, file_count, status, error, label, dir, signature),
+                "(project_name, timestamp, total_size, file_count, status, error, "
+                " label, dir, signature, relinked_count, verified, verified_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (project_name, timestamp, total_size, file_count, status, error,
+                 label, dir, signature, relinked_count, verified, verified_at),
             )
             sid = cur.lastrowid
             self.conn.executemany(
@@ -63,6 +68,27 @@ class Catalog:
             )
             self.conn.commit()
             return sid
+
+    def get_snapshot(self, snapshot_id) -> dict | None:
+        with self._lock:
+            row = self.conn.execute(
+                "SELECT * FROM snapshots WHERE id = ?", (snapshot_id,)
+            ).fetchone()
+        return dict(row) if row else None
+
+    def set_verified(self, snapshot_id, verified, verified_at, status=None) -> None:
+        with self._lock:
+            if status is not None:
+                self.conn.execute(
+                    "UPDATE snapshots SET verified = ?, verified_at = ?, status = ? WHERE id = ?",
+                    (verified, verified_at, status, snapshot_id),
+                )
+            else:
+                self.conn.execute(
+                    "UPDATE snapshots SET verified = ?, verified_at = ? WHERE id = ?",
+                    (verified, verified_at, snapshot_id),
+                )
+            self.conn.commit()
 
     def snapshots_for(self, project_name) -> list[dict]:
         with self._lock:

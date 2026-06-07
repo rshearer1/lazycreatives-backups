@@ -13,6 +13,7 @@ from ablebackup.api.schemas import BackupRequest, Config, ScanRequest
 from ablebackup.catalog import Catalog
 from ablebackup.scheduler import BackupScheduler
 from ablebackup.service import build_overview, default_timestamp, run_backup, scan_summary
+from ablebackup.verifier import verify_snapshot
 
 
 def create_app(token: str, db_path: Path) -> FastAPI:
@@ -157,6 +158,21 @@ def create_app(token: str, db_path: Path) -> FastAPI:
                     if dest else ""
                 )
         return {"project_name": name, "snapshots": snaps}
+
+    @app.get("/api/verify/{snapshot_id}", dependencies=[Depends(require_token)])
+    def verify(snapshot_id: int):
+        cat = app.state.catalog
+        snap = cat.get_snapshot(snapshot_id)
+        if snap is None:
+            raise HTTPException(status_code=404, detail="unknown snapshot")
+        snap_dir = snap.get("dir")
+        if not snap_dir:
+            raise HTTPException(status_code=400, detail="snapshot has no recorded folder")
+        result = verify_snapshot(snap_dir, deep=True)
+        new_status = "error" if not result["ok"] else None
+        cat.set_verified(snapshot_id, 1 if result["ok"] else 0,
+                         default_timestamp(), status=new_status)
+        return result
 
     @app.websocket("/ws/progress")
     async def ws_progress(websocket: WebSocket, token: str = ""):

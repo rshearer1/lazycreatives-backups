@@ -11,6 +11,7 @@ from ablebackup.catalog import Catalog
 from ablebackup.locator import default_libraries, make_locator
 from ablebackup.models import ProjectScan
 from ablebackup.scanner import scan_one, scan_projects
+from ablebackup.verifier import verify_snapshot
 
 ProgressCb = Optional[Callable[[dict], None]]
 
@@ -178,13 +179,22 @@ def run_backup(sources: list[Path], dest: Path, catalog: Catalog,
             _emit(progress, {"type": "project_error", "index": i,
                              "project_name": p.name, "error": str(e)})
             continue
-        # A snapshot that's missing samples is NOT a clean success — say so.
-        status = "partial" if result.missing else "ok"
+        # Re-read the snapshot we just wrote to confirm every file actually landed
+        # at the right size (catches truncated/failed writes, esp. over a NAS).
+        v = verify_snapshot(result.snapshot_dir, deep=False)
+        if not v["ok"]:
+            status = "error"
+            verr = v["error"] or f"{len(v['missing_files'])} missing, {len(v['bad_files'])} bad"
+        else:
+            status = "partial" if result.missing else "ok"
+            verr = None
         catalog.record_snapshot(
             project_name=result.project_name, timestamp=result.timestamp,
             total_size=result.total_size, file_count=result.file_count,
-            status=status, missing=result.missing, label=label,
+            status=status, missing=result.missing, error=verr, label=label,
             dir=str(result.snapshot_dir), signature=signature,
+            relinked_count=result.relinked_count,
+            verified=1 if v["ok"] else 0, verified_at=timestamp,
         )
         ok_count += 1
         _emit(progress, {"type": "project_done", "index": i,

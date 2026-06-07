@@ -25,6 +25,19 @@ export interface Snapshot {
   missing?: string[];
   dir?: string;
   label?: string | null;
+  verified?: number;
+  relinked_count?: number;
+}
+export interface VerifyResult {
+  ok: boolean;
+  checked: number;
+  present: number;
+  missing_files: string[];
+  bad_files: string[];
+  portable_ok: boolean | null;
+  portable_missing: string[];
+  relinked: { logical_path: string; source_path: string }[];
+  error: string | null;
 }
 export interface ProjectRow {
   project_name: string;
