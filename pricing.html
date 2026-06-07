@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pricing — LazyCreatives Backups</title>
+<meta property="og:title" content="LazyCreatives Backups — Pricing">
+<meta property="og:description" content="Buy once, own it forever. No subscription, no cloud.">
+<style>
+  :root{
+    --black:#0A0B0D; --console:#15181D; --gold:#F5C451; --green:#4ADE80;
+    --ink:#F3F4F6; --muted:#9AA1AB; --line:rgba(255,255,255,.09);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(120% 70% at 50% -10%,#16191e,var(--black) 60%);
+    color:var(--ink);font-family:var(--font);line-height:1.55;min-height:100vh;padding:5vh 6vw 9vh}
+  .wrap{max-width:1040px;margin:0 auto}
+  a{color:inherit}
+  .back{color:var(--muted);font-size:14px;text-decoration:none;font-weight:600}
+  .back:hover{color:var(--gold)}
+  header{display:flex;align-items:center;gap:16px;margin:18px 0 8px}
+  .mark{width:48px;height:54px;flex:0 0 auto}
+  header b{font-size:22px;font-weight:800;letter-spacing:-.02em}
+  header b span{color:var(--gold)}
+  h1{font-size:clamp(28px,4.5vw,40px);font-weight:800;letter-spacing:-.025em;margin:26px 0 8px}
+  h1 .g{color:var(--gold)}
+  .lede{color:var(--muted);font-size:17px;max-width:60ch;margin-bottom:36px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .tier{border:1px solid var(--line);border-radius:18px;padding:26px 24px;background:var(--console);display:flex;flex-direction:column}
+  .tier.pop{border-color:rgba(245,196,81,.55);box-shadow:0 16px 60px rgba(245,196,81,.10);position:relative}
+  .tier.pop::after{content:"Most popular";position:absolute;top:-11px;left:24px;background:var(--gold);color:#1a1304;font-size:11px;font-weight:800;letter-spacing:.04em;padding:4px 10px;border-radius:99px}
+  .tier h2{font-size:18px;font-weight:800;margin-bottom:4px}
+  .tier .who{color:var(--muted);font-size:13px;min-height:34px}
+  .price{font-size:38px;font-weight:800;letter-spacing:-.02em;margin:10px 0 2px}
+  .price small{font-size:15px;color:var(--muted);font-weight:600}
+  .once{color:var(--green);font-size:12.5px;font-weight:700;letter-spacing:.03em;margin-bottom:16px}
+  ul{list-style:none;display:flex;flex-direction:column;gap:9px;margin:6px 0 22px}
+  li{font-size:14px;color:#dfe2e7;padding-left:22px;position:relative}
+  li::before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:800}
+  li.no{color:var(--muted)} li.no::before{content:"–";color:var(--muted)}
+  .cta{margin-top:auto;text-align:center;text-decoration:none;font-weight:800;font-size:15px;
+    padding:13px 18px;border-radius:11px;border:1px solid var(--line);color:var(--ink);background:rgba(255,255,255,.03);transition:.15s}
+  .cta:hover{border-color:rgba(245,196,81,.5);background:rgba(245,196,81,.07)}
+  .cta.primary{background:var(--gold);color:#1a1304;border-color:var(--gold)}
+  .cta.soon{opacity:.85}
+  .band{margin-top:20px;border:1px solid var(--line);border-radius:18px;padding:24px 26px;background:linear-gradient(120deg,#15181d,#0d0f12);
+    display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap}
+  .band h3{font-size:19px;font-weight:800;margin-bottom:4px}
+  .band p{color:var(--muted);font-size:14.5px;max-width:60ch}
+  .note{margin-top:34px;color:var(--muted);font-size:13.5px;line-height:1.7;border-top:1px solid var(--line);padding-top:20px}
+  .note b{color:var(--ink)}
+  .tag{display:inline-block;background:rgba(74,222,128,.12);color:var(--green);font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;margin-bottom:18px}
+  @media(max-width:780px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Back to overview</a>
+  <header>
+    <svg class="mark" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 3 L57 13 V31 C57 47 47.5 57.5 32 61.5 C16.5 57.5 7 47 7 31 V13 Z" fill="#13161b" stroke="#F5C451" stroke-width="2.4"/>
+      <g stroke="#F5C451" stroke-width="3.2" stroke-linecap="round"><line x1="19" y1="34" x2="19" y2="40"/><line x1="25" y1="29" x2="25" y2="45"/></g>
+      <line x1="45" y1="31" x2="45" y2="43" stroke="#F5C451" stroke-width="3.2" stroke-linecap="round" opacity=".5"/>
+      <path d="M22 37 l7 7 l16 -17" stroke="#4ADE80" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <b>LazyCreatives <span>Backups</span></b>
+  </header>
+
+  <h1>Buy once. <span class="g">Own it forever.</span></h1>
+  <p class="lede">No subscription, no cloud, no account. A one-time license for verified backups you control — with optional yearly updates you can take or leave.</p>
+  <div class="tag">★ Early-adopter pricing — first 100 buyers</div>
+
+  <div class="grid">
+    <div class="tier">
+      <h2>Free</h2>
+      <div class="who">For trying it out &amp; hobby projects</div>
+      <div class="price">$0</div>
+      <div class="once">Free forever</div>
+      <ul>
+        <li>One DAW (Ableton)</li>
+        <li>Manual backups</li>
+        <li>One backup destination</li>
+        <li>On-demand Verify (limited)</li>
+        <li class="no">Scheduled / automatic backups</li>
+        <li class="no">Auto-relink &amp; restore</li>
+      </ul>
+      <a class="cta" href="https://github.com/rshearer1/lazycreatives-backups/releases/latest">Download free</a>
+    </div>
+
+    <div class="tier pop">
+      <h2>Pro</h2>
+      <div class="who">For working producers</div>
+      <div class="price">$39 <small>then $59</small></div>
+      <div class="once">One-time · 2 machines · 12 months of updates</div>
+      <ul>
+        <li>All DAWs (Ableton + FL Studio)</li>
+        <li>Automatic &amp; scheduled backups</li>
+        <li>Unlimited destinations</li>
+        <li>Full deep Verify</li>
+        <li>Auto-relink missing samples</li>
+        <li>Restore to any folder</li>
+      </ul>
+      <a class="cta primary soon" href="#notify">Get Pro — coming soon</a>
+    </div>
+
+    <div class="tier">
+      <h2>Studio</h2>
+      <div class="who">For studios &amp; small teams</div>
+      <div class="price">$199</div>
+      <div class="once">One-time · up to 5 seats · commercial use</div>
+      <ul>
+        <li>Everything in Pro</li>
+        <li>Up to 5 machines / seats</li>
+        <li>Commercial-use license</li>
+        <li>Priority email support</li>
+        <li>+$39 per extra seat</li>
+      </ul>
+      <a class="cta soon" href="#notify">Get Studio — coming soon</a>
+    </div>
+  </div>
+
+  <div class="band">
+    <div>
+      <h3>Label &amp; site licenses</h3>
+      <p>Running a label or multi-room studio? Get an org-wide license with onboarding, priority support, and optional custom DAW adapters. Protect every session your catalog depends on.</p>
+    </div>
+    <a class="cta primary" href="https://github.com/rshearer1/lazycreatives-backups">Get in touch</a>
+  </div>
+
+  <p class="note" id="notify">
+    <b>Updates Pass — $24/yr (optional).</b> Stay on the latest version as DAWs evolve. Let it lapse and your current version keeps working forever — you own what you paid for.<br><br>
+    <b>Coming soon:</b> checkout and license keys are being set up. Star the <a href="https://github.com/rshearer1/lazycreatives-backups" style="color:var(--gold)">GitHub repo</a> to be first to know when Pro goes on sale at the early-adopter price.<br><br>
+    Prices in USD. 14-day no-questions refund. Sales tax/VAT handled at checkout.
+  </p>
+</div>
+</body>
+</html>
