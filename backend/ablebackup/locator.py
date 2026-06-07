@@ -10,12 +10,18 @@ import os
 from pathlib import Path
 from typing import Callable, Optional
 
+from ablebackup.daws.base import COMMON_SKIP
+
 # Index only plausible audio/media files — keeps the index small and relevant.
 AUDIO_EXTS = {
     ".wav", ".aif", ".aiff", ".aifc", ".flac", ".mp3", ".m4a", ".ogg",
     ".wv", ".caf", ".aac", ".mov", ".mp4", ".m4v",
 }
-_SKIP_DIRS = {"Backup", "AbletonBackups", "Ableton Project Info", "_pool", "_External"}
+# Reuse the shared skip set so the locator never descends into ANY DAW's backup
+# destination (AbletonBackups/FLStudioBackups/ReaperBackups/DAWprojectBackups/
+# Backup/Backups) — otherwise a "missing" sample could relink to a copy living in a
+# previous backup pool/snapshot rather than the real library.
+_SKIP_DIRS = COMMON_SKIP | {"Ableton Project Info", "_pool", "_External"}
 
 
 def default_libraries() -> list[Path]:
