@@ -2,29 +2,49 @@ import { useEffect, useState } from "react";
 import type { BackupProgress } from "../useProgress";
 import { ProgressBar } from "../components/ProgressBar";
 import { PageHeader } from "../components/PageHeader";
+import { Button } from "../components/Button";
 import { makeApi } from "../api";
 import type { Snapshot } from "../types";
 import { fmtDate } from "../format";
 
 const api = makeApi();
 
-export function Backup({ progress: p }: { progress: BackupProgress }) {
+export function Backup({ progress: p, jobId }: { progress: BackupProgress; jobId: string | null }) {
   const [last, setLast] = useState<Snapshot | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const idle = !p.active && !p.done && p.total === 0;
 
   useEffect(() => {
     if (idle) api.history(1).then((h) => setLast(h[0] ?? null)).catch(() => {});
   }, [idle]);
 
+  // Reset the cancelling flag once a run is no longer active.
+  useEffect(() => { if (!p.active) setCancelling(false); }, [p.active]);
+
+  async function cancel() {
+    if (!jobId) return;
+    setCancelling(true);
+    try { await api.cancelJob(jobId); } catch { setCancelling(false); }
+  }
+
   const subtitle = p.preparing ? "Preparing…"
     : p.active && p.current ? `Backing up ${p.current}…`
     : p.active ? "Working…"
+    : p.cancelled ? "Cancelled."
     : p.done ? "Complete." : "No backup running.";
   const doneCount = p.completed + p.skipped + p.errors;
 
   return (
     <>
-      <PageHeader title="Backup progress" subtitle={subtitle} />
+      <PageHeader
+        title="Backup progress"
+        subtitle={subtitle}
+        actions={p.active && jobId ? (
+          <Button variant="danger" onClick={cancel} disabled={cancelling}>
+            {cancelling ? "Cancelling…" : "Cancel"}
+          </Button>
+        ) : undefined}
+      />
 
       {idle ? (
         <div className="card">

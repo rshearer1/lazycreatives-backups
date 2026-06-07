@@ -1,5 +1,6 @@
 """FastAPI application factory for the backup sidecar."""
 import asyncio
+import threading
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -46,6 +47,7 @@ def create_app(token: str, db_path: Path) -> FastAPI:
     app.state.hub = hub
     app.state.scheduler = scheduler
     app.state.jobs = {}
+    app.state.cancels = {}  # job_id -> threading.Event, to cancel a running backup
 
     @app.get("/health")
     def health():
@@ -88,6 +90,7 @@ def create_app(token: str, db_path: Path) -> FastAPI:
                        portable, layout, find_missing, libraries):
         hub = app.state.hub
         cat = app.state.catalog
+        cancel = app.state.cancels[job_id]
 
         def progress(ev):
             hub.publish_threadsafe(ev)
@@ -95,10 +98,12 @@ def create_app(token: str, db_path: Path) -> FastAPI:
         try:
             result = await asyncio.to_thread(
                 run_backup, sources, dest, cat, timestamp, progress, als_paths,
-                label, portable, layout, find_missing, libraries)
+                label, portable, layout, find_missing, libraries, cancel.is_set)
             app.state.jobs[job_id] = {"state": "done", "result": result}
         except Exception as e:  # pragma: no cover - defensive
             app.state.jobs[job_id] = {"state": "error", "error": str(e)}
+        finally:
+            app.state.cancels.pop(job_id, None)
 
     @app.post("/api/backup", dependencies=[Depends(require_token)])
     async def backup(req: BackupRequest):
@@ -113,6 +118,7 @@ def create_app(token: str, db_path: Path) -> FastAPI:
         app.state.hub.bind_loop(asyncio.get_running_loop())
         job_id = uuid.uuid4().hex
         app.state.jobs[job_id] = {"state": "running"}
+        app.state.cancels[job_id] = threading.Event()
         asyncio.create_task(
             _run_job(job_id, sources, Path(dest), timestamp, req.als_paths,
                      req.label, req.portable, req.layout, req.find_missing,
@@ -125,6 +131,14 @@ def create_app(token: str, db_path: Path) -> FastAPI:
         if job is None:
             raise HTTPException(status_code=404, detail="unknown job")
         return job
+
+    @app.post("/api/jobs/{job_id}/cancel", dependencies=[Depends(require_token)])
+    def cancel_job(job_id: str):
+        ev = app.state.cancels.get(job_id)
+        if ev is None:
+            raise HTTPException(status_code=404, detail="job not running")
+        ev.set()  # checked between projects in run_backup
+        return {"cancelling": True}
 
     @app.get("/api/overview", dependencies=[Depends(require_token)])
     def overview():

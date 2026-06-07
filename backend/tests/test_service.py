@@ -39,7 +39,7 @@ def test_run_backup_records_and_emits_progress(tmp_path):
     types = [e["type"] for e in events]
     assert "project_start" in types
     assert "project_done" in types
-    assert events[-1] == {"type": "backup_done", "ok_count": 1, "error_count": 0, "skipped_count": 0}
+    assert events[-1] == {"type": "backup_done", "ok_count": 1, "error_count": 0, "skipped_count": 0, "cancelled": False}
     cat.close()
 
 
@@ -100,6 +100,19 @@ def test_run_backup_records_label_and_layout(tmp_path):
     assert row["label"] == "pre-mix"
     assert (dest / "AbletonBackups" / "by-date" / "t" / "Song" / "Song.als").exists()
     assert row["dir"].endswith("by-date/t/Song")
+    cat.close()
+
+
+def test_run_backup_can_be_cancelled(tmp_path):
+    _build_project(tmp_path)
+    dest = tmp_path / "NAS"
+    cat = Catalog(tmp_path / "c.db")
+
+    res = run_backup([tmp_path], dest, cat, timestamp="t", should_cancel=lambda: True)
+
+    assert res["cancelled"] is True
+    assert res["ok_count"] == 0
+    assert cat.snapshots_for("Song") == []  # nothing written when cancelled up front
     cat.close()
 
 

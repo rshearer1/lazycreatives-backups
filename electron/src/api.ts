@@ -37,6 +37,7 @@ export function makeApi() {
       return req("POST", "/api/backup", opts);
     },
     async jobStatus(id: string): Promise<JobStatus> { return req("GET", `/api/jobs/${id}`); },
+    async cancelJob(id: string): Promise<{ cancelling: boolean }> { return req("POST", `/api/jobs/${id}/cancel`); },
     async overview(): Promise<Overview> { return req("GET", "/api/overview"); },
     async history(limit = 50): Promise<Snapshot[]> {
       return (await req("GET", `/api/history?limit=${limit}`)).snapshots;

@@ -139,7 +139,7 @@ def run_backup(sources: list[Path], dest: Path, catalog: Catalog,
                timestamp: Optional[str] = None, progress: ProgressCb = None,
                als_paths: Optional[list[str]] = None, label: Optional[str] = None,
                portable: bool = False, layout: str = "project_date",
-               find_missing: bool = False, libraries=None) -> dict:
+               find_missing: bool = False, libraries=None, should_cancel=None) -> dict:
     """Back up discovered projects to dest, recording history and emitting progress.
 
     When als_paths is given, only the projects whose .als matches are backed up
@@ -162,9 +162,13 @@ def run_backup(sources: list[Path], dest: Path, catalog: Catalog,
     ok_count = 0
     error_count = 0
     skipped_count = 0
+    cancelled = False
     _emit(progress, {"type": "backup_start", "project_count": len(projects),
                      "timestamp": timestamp})
     for i, p in enumerate(projects):
+        if should_cancel and should_cancel():
+            cancelled = True
+            break
         _emit(progress, {"type": "project_start", "index": i,
                          "project_name": p.name, "total": len(projects)})
         signature = project_signature(p)
@@ -209,7 +213,8 @@ def run_backup(sources: list[Path], dest: Path, catalog: Catalog,
                          "file_count": result.file_count,
                          "missing_count": len(result.missing)})
     _emit(progress, {"type": "backup_done", "skipped_count": skipped_count,
-                     "ok_count": ok_count,
-                     "error_count": error_count})
+                     "ok_count": ok_count, "error_count": error_count,
+                     "cancelled": cancelled})
     return {"timestamp": timestamp, "ok_count": ok_count,
-            "error_count": error_count, "skipped_count": skipped_count}
+            "error_count": error_count, "skipped_count": skipped_count,
+            "cancelled": cancelled}
