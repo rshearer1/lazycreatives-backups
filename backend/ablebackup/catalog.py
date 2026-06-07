@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS snapshots (
     total_size INTEGER NOT NULL,
     file_count INTEGER NOT NULL,
     status TEXT NOT NULL,
-    error TEXT
+    error TEXT,
+    label TEXT,
+    dir TEXT
 );
 CREATE TABLE IF NOT EXISTS missing_refs (
     snapshot_id INTEGER NOT NULL,
@@ -34,16 +36,25 @@ class Catalog:
         self.conn.row_factory = sqlite3.Row
         self._lock = threading.Lock()
         self.conn.executescript(_SCHEMA)
+        self._migrate()
         self.conn.commit()
 
+    def _migrate(self) -> None:
+        # Add columns introduced after the first release to pre-existing catalogs.
+        cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(snapshots)")}
+        for col in ("label", "dir", "signature"):
+            if col not in cols:
+                self.conn.execute(f"ALTER TABLE snapshots ADD COLUMN {col} TEXT")
+
     def record_snapshot(self, project_name, timestamp, total_size,
-                        file_count, status, missing, error=None) -> int:
+                        file_count, status, missing, error=None,
+                        label=None, dir="", signature="") -> int:
         with self._lock:
             cur = self.conn.execute(
                 "INSERT INTO snapshots "
-                "(project_name, timestamp, total_size, file_count, status, error) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (project_name, timestamp, total_size, file_count, status, error),
+                "(project_name, timestamp, total_size, file_count, status, error, label, dir, signature) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (project_name, timestamp, total_size, file_count, status, error, label, dir, signature),
             )
             sid = cur.lastrowid
             self.conn.executemany(
@@ -105,6 +116,20 @@ class Catalog:
                 "FROM snapshots GROUP BY project_name ORDER BY project_name"
             ).fetchall()
         return [dict(r) for r in rows]
+
+    def latest_signatures(self) -> dict:
+        """project_name -> content signature of its most recent successful snapshot.
+
+        Used to skip backing up a project that hasn't changed since last time.
+        """
+        with self._lock:
+            rows = self.conn.execute(
+                "SELECT s.project_name, s.signature FROM snapshots s "
+                "JOIN (SELECT project_name, MAX(id) AS mid FROM snapshots "
+                "      WHERE status = 'ok' GROUP BY project_name) l "
+                "  ON s.id = l.mid"
+            ).fetchall()
+        return {r["project_name"]: r["signature"] for r in rows if r["signature"]}
 
     def snapshot_totals(self) -> dict:
         """Aggregate counts/sizes across all snapshots, for the dashboard."""

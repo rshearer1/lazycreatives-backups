@@ -70,9 +70,17 @@ def create_app(token: str, db_path: Path) -> FastAPI:
     @app.post("/api/scan", dependencies=[Depends(require_token)])
     def scan(req: ScanRequest):
         sources = _resolve_sources(req.sources)
-        return {"projects": scan_summary(sources)}
+        hub = app.state.hub
 
-    async def _run_job(job_id, sources, dest, timestamp):
+        def progress(ev):
+            try:
+                hub.publish_threadsafe(ev)
+            except RuntimeError:
+                pass  # no event loop bound (e.g. bare TestClient) — skip live ticks
+
+        return {"projects": scan_summary(sources, progress=progress)}
+
+    async def _run_job(job_id, sources, dest, timestamp, als_paths, label, portable, layout):
         hub = app.state.hub
         cat = app.state.catalog
 
@@ -81,7 +89,8 @@ def create_app(token: str, db_path: Path) -> FastAPI:
 
         try:
             result = await asyncio.to_thread(
-                run_backup, sources, dest, cat, timestamp, progress)
+                run_backup, sources, dest, cat, timestamp, progress, als_paths,
+                label, portable, layout)
             app.state.jobs[job_id] = {"state": "done", "result": result}
         except Exception as e:  # pragma: no cover - defensive
             app.state.jobs[job_id] = {"state": "error", "error": str(e)}
@@ -99,7 +108,9 @@ def create_app(token: str, db_path: Path) -> FastAPI:
         app.state.hub.bind_loop(asyncio.get_running_loop())
         job_id = uuid.uuid4().hex
         app.state.jobs[job_id] = {"state": "running"}
-        asyncio.create_task(_run_job(job_id, sources, Path(dest), timestamp))
+        asyncio.create_task(
+            _run_job(job_id, sources, Path(dest), timestamp, req.als_paths,
+                     req.label, req.portable, req.layout))
         return {"job_id": job_id, "state": "running"}
 
     @app.get("/api/jobs/{job_id}", dependencies=[Depends(require_token)])
@@ -128,9 +139,18 @@ def create_app(token: str, db_path: Path) -> FastAPI:
     @app.get("/api/projects/{name}", dependencies=[Depends(require_token)])
     def project_detail(name: str):
         cat = app.state.catalog
+        cfg = cat.get_setting("config") or {}
+        dest = cfg.get("dest", "")
         snaps = cat.snapshots_for(name)
         for s in snaps:
             s["missing"] = cat.missing_for(s["id"])
+            # Prefer the stored snapshot folder; fall back to the default layout for
+            # rows written before we recorded it, so older backups still reveal.
+            if not s.get("dir"):
+                s["dir"] = (
+                    str(Path(dest) / "AbletonBackups" / "projects" / name / s["timestamp"])
+                    if dest else ""
+                )
         return {"project_name": name, "snapshots": snaps}
 
     @app.websocket("/ws/progress")

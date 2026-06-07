@@ -39,7 +39,43 @@ def test_run_backup_records_and_emits_progress(tmp_path):
     types = [e["type"] for e in events]
     assert "project_start" in types
     assert "project_done" in types
-    assert events[-1] == {"type": "backup_done", "ok_count": 1, "error_count": 0}
+    assert events[-1] == {"type": "backup_done", "ok_count": 1, "error_count": 0, "skipped_count": 0}
+    cat.close()
+
+
+def test_run_backup_skips_unchanged_project(tmp_path):
+    _build_project(tmp_path)
+    dest = tmp_path / "NAS"
+    cat = Catalog(tmp_path / "c.db")
+    als = [str(tmp_path / "Song Project" / "Song.als")]
+
+    first = run_backup([tmp_path], dest, cat, timestamp="t1", als_paths=als)
+    assert first["ok_count"] == 1 and first["skipped_count"] == 0
+
+    # Nothing changed -> second run makes no new snapshot.
+    second = run_backup([tmp_path], dest, cat, timestamp="t2", als_paths=als)
+    assert second["ok_count"] == 0 and second["skipped_count"] == 1
+    assert len(cat.snapshots_for("Song")) == 1
+
+    # Change a sample -> it backs up again.
+    (tmp_path / "Song Project" / "Samples" / "loop.wav").write_bytes(b"loopdata-CHANGED-bigger")
+    third = run_backup([tmp_path], dest, cat, timestamp="t3", als_paths=als)
+    assert third["ok_count"] == 1 and third["skipped_count"] == 0
+    assert len(cat.snapshots_for("Song")) == 2
+    cat.close()
+
+
+def test_run_backup_records_label_and_layout(tmp_path):
+    _build_project(tmp_path)
+    dest = tmp_path / "NAS"
+    cat = Catalog(tmp_path / "c.db")
+
+    run_backup([tmp_path], dest, cat, timestamp="t", label="pre-mix", layout="date_project")
+
+    row = cat.snapshots_for("Song")[0]
+    assert row["label"] == "pre-mix"
+    assert (dest / "AbletonBackups" / "by-date" / "t" / "Song" / "Song.als").exists()
+    assert row["dir"].endswith("by-date/t/Song")
     cat.close()
 
 
@@ -49,7 +85,7 @@ def test_run_backup_isolates_project_errors(tmp_path, monkeypatch):
     cat = Catalog(tmp_path / "c.db")
 
     import ablebackup.service as svc
-    def boom(scan, dest_root, timestamp):
+    def boom(scan, dest_root, timestamp, **kwargs):
         raise OSError("disk full")
     monkeypatch.setattr(svc, "backup_project", boom)
 
