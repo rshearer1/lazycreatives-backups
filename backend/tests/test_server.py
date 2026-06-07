@@ -1,4 +1,12 @@
-from ablebackup.server import build_app_from_env, read_config
+import os
+import threading
+
+from ablebackup.server import (
+    _parent_alive,
+    build_app_from_env,
+    install_parent_watchdog,
+    read_config,
+)
 
 
 def test_read_config_from_env(monkeypatch, tmp_path):
@@ -28,3 +36,33 @@ def test_build_app_from_env(monkeypatch, tmp_path):
     assert app.state.token == "tok"
     app.state.catalog.close()
     app.state.scheduler.shutdown()
+
+
+def test_read_config_parent_pid(monkeypatch):
+    monkeypatch.setenv("ABLEBACKUP_PARENT_PID", "4321")
+    assert read_config()["parent_pid"] == 4321
+
+
+def test_read_config_parent_pid_absent(monkeypatch):
+    monkeypatch.delenv("ABLEBACKUP_PARENT_PID", raising=False)
+    assert read_config()["parent_pid"] is None
+
+
+def test_parent_alive_true_for_self():
+    assert _parent_alive(os.getpid()) is True
+
+
+def test_parent_watchdog_fires_when_parent_gone():
+    fired = threading.Event()
+    install_parent_watchdog(
+        424242, poll_interval=0.01, on_dead=fired.set, alive=lambda pid: False
+    )
+    assert fired.wait(timeout=1.0)
+
+
+def test_parent_watchdog_quiet_while_parent_alive():
+    fired = threading.Event()
+    install_parent_watchdog(
+        424242, poll_interval=0.01, on_dead=fired.set, alive=lambda pid: True
+    )
+    assert not fired.wait(timeout=0.1)

@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
-const { startSidecar } = require("./sidecar");
+const { startSidecar, stopSidecar, killGroup } = require("./sidecar");
 const { createTray } = require("./tray");
 
 const isDev = !!process.env.ABLEBACKUP_DEV;
@@ -8,6 +8,7 @@ let win = null;
 let sidecar = null;
 let tray = null;
 let isQuitting = false;
+let stopping = null; // set to the shutdown promise once a quit begins
 
 function backendDir() {
   // dev: repo backend/. packaged: resourcesPath/backend (set up at packaging time).
@@ -60,5 +61,24 @@ app.whenReady().then(async () => {
 
 app.on("window-all-closed", () => { /* stay alive in tray */ });
 
-app.on("before-quit", () => { isQuitting = true; });
-app.on("will-quit", () => { if (sidecar?.proc) sidecar.proc.kill(); });
+// Hold the quit until the sidecar is actually gone, then exit for real. before-quit
+// fires from the tray (app.quit) and from our signal handlers below.
+app.on("before-quit", (e) => {
+  isQuitting = true;
+  if (sidecar && !sidecar.stopped && !stopping) {
+    e.preventDefault();
+    stopping = stopSidecar(sidecar).finally(() => app.exit(0));
+  }
+});
+
+// Last-resort *synchronous* kill on any node exit path we did not anticipate.
+process.on("exit", () => { if (sidecar) killGroup(sidecar.proc, "SIGKILL"); });
+
+// Dev: `concurrently -k` (Ctrl-C on `npm start`) signals the Electron main process,
+// which does not reliably run before-quit for a bare signal — so handle it ourselves.
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+  process.on(sig, () => {
+    if (stopping) return;
+    stopping = stopSidecar(sidecar).finally(() => app.exit(0));
+  });
+}
