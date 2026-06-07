@@ -75,6 +75,9 @@ def resolve_refs(refs: list[FileRef], project_dir: Path,
     # A sample used by N clips appears as N identical FileRefs; collapse them so
     # counts and sizes reflect unique files, not how many times each is triggered.
     seen: set[str] = set()
+    # project_dir is constant for the whole project — resolve it once instead of in
+    # _is_inside per ref (realpath is a syscall-heavy walk).
+    project_real = project_dir.resolve()
     for ref in refs:
         chosen: Path | None = None
         relinked = False
@@ -94,16 +97,24 @@ def resolve_refs(refs: list[FileRef], project_dir: Path,
                 chosen = found
                 relinked = True
         if chosen is not None:
-            key = str(chosen.resolve())
+            # Resolve chosen once and reuse for both the dedup key and the
+            # inside-project test (was resolved twice: here and inside _is_inside).
+            chosen_real = chosen.resolve()
+            key = str(chosen_real)
             if key in seen:
                 continue
             seen.add(key)
             st = chosen.stat()
+            try:
+                chosen_real.relative_to(project_real)
+                inside = True
+            except ValueError:
+                inside = False
             resolved.append(ResolvedRef(
                 name=ref.name or chosen.name,
                 resolved_path=chosen,
                 exists=True,
-                inside_project=_is_inside(chosen, project_dir),
+                inside_project=inside,
                 size=st.st_size,
                 mtime=st.st_mtime,
                 relinked=relinked,

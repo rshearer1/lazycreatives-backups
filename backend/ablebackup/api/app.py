@@ -194,8 +194,9 @@ def create_app(token: str, db_path: Path) -> FastAPI:
         cfg = cat.get_setting("config") or {}
         dest = cfg.get("dest", "")
         snaps = cat.snapshots_for(name)
+        missing_by_id = cat.missing_for_snapshots([s["id"] for s in snaps])
         for s in snaps:
-            s["missing"] = cat.missing_for(s["id"])
+            s["missing"] = missing_by_id.get(s["id"], [])
             # Prefer the stored snapshot folder; fall back to the default layout for
             # rows written before we recorded it, so older backups still reveal.
             if not s.get("dir"):

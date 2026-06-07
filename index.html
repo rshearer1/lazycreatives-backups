@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LazyCreatives Backups</title>
+<meta property="og:title" content="LazyCreatives Backups">
+<meta property="og:description" content="Verified, deduplicated backups your label actually owns.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --black:#0A0B0D; --console:#15181D; --gold:#F5C451; --green:#4ADE80;
+    --ink:#F3F4F6; --muted:#9AA1AB; --line:rgba(255,255,255,.09);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(120% 80% at 50% -10%,#16191e,var(--black) 60%);
+    color:var(--ink);font-family:var(--font);line-height:1.55;min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;padding:6vh 6vw 8vh}
+  .wrap{width:100%;max-width:900px}
+  header{display:flex;align-items:center;gap:18px;margin-bottom:40px}
+  .mark{width:58px;height:64px;flex:0 0 auto}
+  header b{font-size:26px;font-weight:800;letter-spacing:-.02em}
+  header b span{color:var(--gold)}
+  header small{display:block;color:var(--muted);font-size:14px;font-weight:600;margin-top:2px}
+  h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.025em;line-height:1.08;margin-bottom:14px}
+  h1 .g{color:var(--gold)}
+  .lede{color:var(--muted);font-size:18px;max-width:62ch;margin-bottom:34px}
+  .player{border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    background:#000;box-shadow:0 20px 70px rgba(0,0,0,.5)}
+  video{display:block;width:100%;height:auto}
+  .actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:28px}
+  a.btn{text-decoration:none;font-weight:700;font-size:15px;padding:13px 22px;border-radius:11px;
+    border:1px solid var(--line);color:var(--ink);background:rgba(255,255,255,.03);transition:.15s}
+  a.btn:hover{border-color:rgba(245,196,81,.5);background:rgba(245,196,81,.07)}
+  a.btn.primary{background:var(--gold);color:#1a1304;border-color:var(--gold)}
+  a.btn.primary:hover{filter:brightness(1.05)}
+  .feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:48px}
+  .card{border:1px solid var(--line);border-radius:14px;padding:22px;background:var(--console)}
+  .card h3{font-size:16px;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+  .card h3::before{content:"✓";color:var(--green);font-weight:800}
+  .card p{color:var(--muted);font-size:14.5px}
+  footer{color:var(--muted);font-size:13px;margin-top:54px;border-top:1px solid var(--line);
+    padding-top:20px;width:100%;max-width:900px}
+  footer a{color:var(--gold);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="mark" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 3 L57 13 V31 C57 47 47.5 57.5 32 61.5 C16.5 57.5 7 47 7 31 V13 Z" fill="#13161b" stroke="#F5C451" stroke-width="2.4"/>
+      <g stroke="#F5C451" stroke-width="3.2" stroke-linecap="round"><line x1="19" y1="34" x2="19" y2="40"/><line x1="25" y1="29" x2="25" y2="45"/></g>
+      <line x1="45" y1="31" x2="45" y2="43" stroke="#F5C451" stroke-width="3.2" stroke-linecap="round" opacity=".5"/>
+      <path d="M22 37 l7 7 l16 -17" stroke="#4ADE80" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div><b>LazyCreatives <span>Backups</span></b><small>Verified backups you own</small></div>
+  </header>
+
+  <h1>Never lose a session <span class="g">again.</span></h1>
+  <p class="lede">Verified, deduplicated backups for your music projects — that you own. It finds every session, follows its sounds, and proves each backup actually opens.</p>
+
+  <div class="player">
+    <video controls preload="metadata" playsinline>
+      <source src="lazycreatives-pitch.mp4" type="video/mp4">
+      Your browser can't play this video — <a href="lazycreatives-pitch.mp4">download it here</a>.
+    </video>
+  </div>
+
+  <div class="actions">
+    <a class="btn primary" href="lazycreatives-pitch.mp4" download>Download the video</a>
+    <a class="btn" href="pitch-video.html">Watch the animated version</a>
+    <a class="btn" href="brand/brand-guide.html">Brand guide</a>
+  </div>
+
+  <div class="feat">
+    <div class="card"><h3>Checked, not just copied</h3><p>Re-reads and re-hashes every file after backup, and confirms the project still opens.</p></div>
+    <div class="card"><h3>Never lose a sound</h3><p>Relinks missing samples automatically — matched by file size, not just name.</p></div>
+    <div class="card"><h3>Runs on its own</h3><p>Scheduled backups in the background; saves only what changed, so it stays small.</p></div>
+    <div class="card"><h3>You own it</h3><p>No cloud, no account. Your drive, your masters — across Ableton and FL Studio.</p></div>
+  </div>
+</div>
+
+<footer>
+  LazyCreatives Backups · <a href="https://github.com/rshearer1/lazycreatives-backups">source on GitHub</a>
+</footer>
+</body>
+</html>
