@@ -41,8 +41,20 @@ def _fileref_to_model(fileref: _ET.Element) -> FileRef:
 
 
 def parse_als(als_path: Path) -> list[FileRef]:
-    """Decompress an .als and return all file references it contains."""
+    """Decompress an .als and return its audio sample references.
+
+    Only <FileRef> elements wrapped in <SampleRef> are real samples. The .als also
+    carries FileRefs for built-in devices and factory/Core-Library presets (Simpler,
+    EQ Eight, .adv presets, cached plugin .aupreset files); those ship with Ableton,
+    are not part of the project, and would otherwise show up as bogus "missing" refs —
+    so they are intentionally excluded.
+    """
     with gzip.open(als_path, "rt", encoding="utf-8") as fh:
         tree = ET.parse(fh)
     root = tree.getroot()
-    return [_fileref_to_model(fr) for fr in root.iter("FileRef")]
+    refs = []
+    for sample_ref in root.iter("SampleRef"):
+        fr = sample_ref.find("FileRef")
+        if fr is not None:
+            refs.append(_fileref_to_model(fr))
+    return refs

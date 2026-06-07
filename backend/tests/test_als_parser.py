@@ -37,3 +37,18 @@ def test_parses_legacy_relative_path_element_chain(tmp_path):
     assert len(refs) == 1
     assert refs[0].name == "old.wav"
     assert refs[0].relative_path == "Samples/Imported/old.wav"
+
+
+def test_ignores_factory_and_device_filerefs(tmp_path):
+    # FileRefs not wrapped in <SampleRef> are devices / factory presets that ship
+    # with Ableton (Simpler, .adv presets, cached plugin presets) — not samples.
+    als = write_als(tmp_path / "song.als", [
+        fileref_abs("/Users/me/kick.wav", "kick.wav"),
+        '<FileRef><Path Value="/Applications/Ableton Live 12 Suite.app/Contents/'
+        'App-Resources/Builtin/Devices/Instruments/Simpler"/></FileRef>',
+        '<FileRef><Path Value="/Users/me/Library/Caches/Ableton/Presets/'
+        'AudioUnits/Kickstart 2/Default.aupreset"/></FileRef>',
+    ])
+    refs = parse_als(als)
+    assert len(refs) == 1
+    assert refs[0].name == "kick.wav"
