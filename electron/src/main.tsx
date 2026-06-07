@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { EntitlementProvider } from "./entitlement";
 import "./theme.css";
 
 // Surface uncaught renderer errors to the console (forwarded to the run log by main.js).
@@ -11,6 +12,8 @@ window.addEventListener("unhandledrejection", (e) =>
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <EntitlementProvider>
+      <App />
+    </EntitlementProvider>
   </React.StrictMode>
 );

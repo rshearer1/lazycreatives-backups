@@ -1,4 +1,4 @@
-import type { Config, JobStatus, Overview, ProjectRow, ProjectSummary, Snapshot, SnapshotFilesResult, VerifyResult } from "./types";
+import type { Config, Entitlement, JobStatus, Overview, ProjectRow, ProjectSummary, Snapshot, SnapshotFilesResult, VerifyResult } from "./types";
 
 function base() {
   const port = (window as any).ablebackup?.port ?? "8753";
@@ -55,6 +55,9 @@ export function makeApi() {
     async snapshotFiles(id: number): Promise<SnapshotFilesResult> {
       return req("GET", `/api/snapshot/${id}/files`);
     },
+    async entitlement(): Promise<Entitlement> { return req("GET", "/api/entitlement"); },
+    async activateLicense(key: string): Promise<Entitlement> { return req("POST", "/api/entitlement/activate", { key }); },
+    async deactivateLicense(): Promise<Entitlement> { return req("POST", "/api/entitlement/deactivate"); },
   };
 }
 export type Api = ReturnType<typeof makeApi>;

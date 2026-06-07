@@ -7,6 +7,8 @@ import type { PendingBackup } from "../App";
 import { Button } from "../components/Button";
 import { PageHeader } from "../components/PageHeader";
 import { ProgressBar } from "../components/ProgressBar";
+import { ProBadge } from "../components/ProBadge";
+import { useEntitlement } from "../entitlement";
 import { fmtSize, dawLabel } from "../format";
 
 const api = makeApi();
@@ -30,6 +32,8 @@ export function Scan({ projects, onProjects, scan, onBackup, onReview }: {
   const [hideAutosaves, setHideAutosaves] = useState(true);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const known = useRef<Set<string> | null>(null);
+  const { allows } = useEntitlement();
+  const canRelink = allows("auto_relink");
 
   // Keep the user's curation across rescans: previously-deselected projects stay
   // off, and newly-discovered projects default to selected.
@@ -134,9 +138,10 @@ export function Scan({ projects, onProjects, scan, onBackup, onReview }: {
 
       {err && <div className="card" style={{ borderColor: "var(--danger)", color: "var(--danger)", marginBottom: 16 }}>{err}</div>}
 
-      <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 2px 14px", color: "var(--text-dim)", fontSize: 13, cursor: "pointer" }}>
-        <input type="checkbox" checked={findMissing} onChange={(e) => setFindMissing(e.target.checked)} />
-        Find missing samples in my library
+      <label className={canRelink ? "" : "locked"} style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 2px 14px", color: "var(--text-dim)", fontSize: 13, cursor: canRelink ? "pointer" : "default" }}>
+        <input type="checkbox" checked={findMissing && canRelink} disabled={!canRelink} onChange={(e) => setFindMissing(e.target.checked)} />
+        Auto-find missing samples in my library
+        {!canRelink && <ProBadge />}
         {relinkedTotal > 0 && <span style={{ color: "var(--accent-2)" }}>· {relinkedTotal} auto-found</span>}
       </label>
 

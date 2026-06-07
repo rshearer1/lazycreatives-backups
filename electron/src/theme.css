@@ -313,6 +313,18 @@ select { cursor: pointer; }
 @keyframes modalIn { 0% { transform: translateY(14px) scale(0.96); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .modal, .modal__scrim { animation: none !important; } }
 
+/* ---- PRO badge + locked feature ---- */
+.pro-badge {
+  display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: .05em;
+  padding: 2px 6px; border-radius: 5px; background: var(--accent); color: #0A0B0D;
+  vertical-align: middle; margin-left: 7px;
+}
+.locked { opacity: 0.55; }
+.locked-note {
+  display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 9px 11px;
+  border: 1px dashed var(--border-strong); border-radius: 9px; font-size: 12.5px; color: var(--text-dim);
+}
+
 /* ---- "what's this?" info tooltip ---- */
 .info {
   display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%;

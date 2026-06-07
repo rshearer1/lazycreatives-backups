@@ -9,9 +9,10 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from ablebackup import entitlement
 from ablebackup.api.auth import require_token, ws_token_ok
 from ablebackup.api.progress import ProgressHub
-from ablebackup.api.schemas import BackupRequest, Config, RestoreRequest, ScanRequest
+from ablebackup.api.schemas import ActivateRequest, BackupRequest, Config, RestoreRequest, ScanRequest
 from ablebackup.catalog import Catalog
 from ablebackup.scheduler import BackupScheduler
 from ablebackup.service import (
@@ -73,6 +74,33 @@ def create_app(token: str, db_path: Path) -> FastAPI:
     def health():
         return {"status": "ok"}
 
+    def _tier() -> str:
+        ent = app.state.catalog.get_setting("entitlement") or {}
+        tier = ent.get("tier", "free")
+        return tier if tier in entitlement.VALID_TIERS else "free"
+
+    def _allows(feature: str) -> bool:
+        return entitlement.allows(_tier(), feature)
+
+    @app.get("/api/entitlement", dependencies=[Depends(require_token)])
+    def get_entitlement():
+        tier = _tier()
+        return {"tier": tier, "features": entitlement.features_for(tier)}
+
+    @app.post("/api/entitlement/activate", dependencies=[Depends(require_token)])
+    def activate(req: ActivateRequest):
+        tier = entitlement.activate_key(req.key)
+        if tier is None:
+            raise HTTPException(status_code=400, detail="That licence key wasn't recognised.")
+        app.state.catalog.set_setting("entitlement", {"tier": tier, "key": req.key.strip().upper()})
+        return {"tier": tier, "features": entitlement.features_for(tier)}
+
+    @app.post("/api/entitlement/deactivate", dependencies=[Depends(require_token)])
+    def deactivate():
+        app.state.catalog.set_setting("entitlement", {"tier": "free"})
+        app.state.scheduler.set_interval(0)  # automatic backup is Pro-only
+        return {"tier": "free", "features": entitlement.features_for("free")}
+
     @app.get("/api/settings", dependencies=[Depends(require_token)])
     def get_settings() -> Config:
         saved = app.state.catalog.get_setting("config")
@@ -80,6 +108,8 @@ def create_app(token: str, db_path: Path) -> FastAPI:
 
     @app.put("/api/settings", dependencies=[Depends(require_token)])
     def put_settings(config: Config) -> Config:
+        if config.interval_minutes > 0 and not _allows("scheduled"):
+            config.interval_minutes = 0  # automatic backup is Pro-only
         app.state.catalog.set_setting("config", config.model_dump())
         app.state.scheduler.set_interval(config.interval_minutes)
         return config
@@ -102,9 +132,13 @@ def create_app(token: str, db_path: Path) -> FastAPI:
             except RuntimeError:
                 pass  # no event loop bound (e.g. bare TestClient) — skip live ticks
 
-        return {"projects": scan_summary(
-            sources, progress=progress, find_missing=req.find_missing,
-            libraries=cfg.get("libraries", []))}
+        find_missing = req.find_missing and _allows("auto_relink")
+        projects = scan_summary(
+            sources, progress=progress, find_missing=find_missing,
+            libraries=cfg.get("libraries", []))
+        if not _allows("multi_daw"):
+            projects = [p for p in projects if p.get("daw") == "ableton"]
+        return {"projects": projects}
 
     async def _run_job(job_id, sources, dest, timestamp, als_paths, label,
                        portable, layout, find_missing, libraries):
@@ -134,6 +168,11 @@ def create_app(token: str, db_path: Path) -> FastAPI:
         if not dest:
             raise HTTPException(status_code=400, detail="no destination configured")
         timestamp = req.timestamp or default_timestamp()
+        # Free tier: Ableton only, and no auto-relink of missing samples.
+        als_paths = req.als_paths
+        if als_paths is not None and not _allows("multi_daw"):
+            als_paths = [a for a in als_paths if str(a).lower().endswith(".als")]
+        find_missing = req.find_missing and _allows("auto_relink")
         # bind the loop here so the worker thread's progress publishing works even
         # when the app is driven without a lifespan (e.g. bare TestClient).
         app.state.hub.bind_loop(asyncio.get_running_loop())
@@ -141,8 +180,8 @@ def create_app(token: str, db_path: Path) -> FastAPI:
         app.state.jobs[job_id] = {"state": "running"}
         app.state.cancels[job_id] = threading.Event()
         asyncio.create_task(
-            _run_job(job_id, sources, Path(dest), timestamp, req.als_paths,
-                     req.label, req.portable, req.layout, req.find_missing,
+            _run_job(job_id, sources, Path(dest), timestamp, als_paths,
+                     req.label, req.portable, req.layout, find_missing,
                      saved.get("libraries", [])))
         return {"job_id": job_id, "state": "running"}
 
@@ -230,6 +269,8 @@ def create_app(token: str, db_path: Path) -> FastAPI:
 
     @app.post("/api/restore", dependencies=[Depends(require_token)])
     async def restore(req: RestoreRequest):
+        if not _allows("restore"):
+            raise HTTPException(status_code=402, detail="Restore is a Pro feature.")
         snap = app.state.catalog.get_snapshot(req.snapshot_id)
         if snap is None:
             raise HTTPException(status_code=404, detail="unknown snapshot")

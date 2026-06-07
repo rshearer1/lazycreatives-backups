@@ -10,4 +10,5 @@ contextBridge.exposeInMainWorld("ablebackup", {
   port: argValue("--ablebackup-port"),
   pickFolder: () => ipcRenderer.invoke("pick-folder"),
   revealPath: (target) => ipcRenderer.invoke("reveal-path", target),
+  openExternal: (url) => ipcRenderer.invoke("open-external", url),
 });

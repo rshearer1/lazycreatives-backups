@@ -65,6 +65,10 @@ ipcMain.handle("reveal-path", (_e, target) => {
   if (target) shell.showItemInFolder(target);
 });
 
+ipcMain.handle("open-external", (_e, url) => {
+  if (typeof url === "string" && /^https?:\/\//.test(url)) shell.openExternal(url);
+});
+
 app.whenReady().then(async () => {
   // macOS/Linux usually expose `python3` (no bare `python`); Windows uses `python`.
   const pythonCmd = process.env.ABLEBACKUP_PYTHON

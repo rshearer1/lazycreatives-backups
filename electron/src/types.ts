@@ -87,6 +87,18 @@ export interface Overview {
   nas: NasStatus;
   schedule: { enabled: boolean; interval_minutes: number; next_run?: string | null };
 }
+export type Tier = "free" | "pro" | "studio";
+export interface Entitlement {
+  tier: Tier;
+  features: {
+    scheduled: boolean;
+    restore: boolean;
+    multi_daw: boolean;
+    auto_relink: boolean;
+    deep_verify: boolean;
+    max_destinations: number;
+  };
+}
 export interface JobStatus {
   state: "running" | "done" | "error";
   result?: { timestamp?: string; ok_count?: number; error_count?: number; path?: string };

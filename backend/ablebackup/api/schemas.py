@@ -14,6 +14,10 @@ class RestoreRequest(BaseModel):
     target: str  # folder to restore the project into
 
 
+class ActivateRequest(BaseModel):
+    key: str  # license key from checkout
+
+
 class ScanRequest(BaseModel):
     sources: list[str] | None = None  # falls back to saved config when omitted
     find_missing: bool = False        # relink missing samples from libraries

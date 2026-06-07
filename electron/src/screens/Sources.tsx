@@ -4,6 +4,9 @@ import type { Config } from "../types";
 import { Button } from "../components/Button";
 import { PageHeader } from "../components/PageHeader";
 import { Info } from "../components/Info";
+import { PlanCard } from "../components/PlanCard";
+import { ProBadge } from "../components/ProBadge";
+import { useEntitlement } from "../entitlement";
 import { fmtInterval, fmtClock } from "../format";
 
 const api = makeApi();
@@ -23,6 +26,8 @@ export function Sources() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [nextRun, setNextRun] = useState<string | null>(null);
+  const { allows } = useEntitlement();
+  const canSchedule = allows("scheduled");
 
   function refreshNextRun() {
     api.overview().then((o) => setNextRun(o.schedule.next_run ?? null)).catch(() => {});
@@ -81,6 +86,8 @@ export function Sources() {
 
       {saveError && <div className="card" style={{ borderColor: "var(--danger)", color: "var(--danger)", marginBottom: 16 }}>{saveError}</div>}
 
+      <PlanCard />
+
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
           <h2 style={{ margin: 0 }}>Source folders</h2>
@@ -111,22 +118,27 @@ export function Sources() {
 
       <div className="card">
         <h2 style={{ display: "flex", alignItems: "center" }}>Automatic backup
+          {!canSchedule && <ProBadge />}
           <Info text="Leave the app running (it lives in your menu-bar tray) and it backs up on this schedule on its own — set it and forget it." /></h2>
-        <div className="seg" role="group" style={{ marginTop: 10, flexWrap: "wrap" }}>
+        <div className={`seg${canSchedule ? "" : " locked"}`} role="group" style={{ marginTop: 10, flexWrap: "wrap" }}>
           {PRESETS.map((p) => (
-            <button key={p.min} disabled={!loaded}
+            <button key={p.min} disabled={!loaded || !canSchedule}
               className={`seg__opt${cfg.interval_minutes === p.min ? " seg__opt--on" : ""}`}
               onClick={() => setCfg({ ...cfg, interval_minutes: p.min })}>{p.label}</button>
           ))}
         </div>
-        <div className="sub" style={{ margin: "11px 0 0", fontSize: 12.5 }}>
-          {cfg.interval_minutes > 0 ? (
-            <span style={{ color: "var(--accent-2)" }}>
-              ✓ On — backs up {fmtInterval(cfg.interval_minutes).replace("every ", "every ")}
-              {nextRun ? ` · next ${fmtClock(nextRun)}` : ""}. Keep the app running (menu-bar tray).
-            </span>
-          ) : "Off — you'll back up manually whenever you like."}
-        </div>
+        {canSchedule ? (
+          <div className="sub" style={{ margin: "11px 0 0", fontSize: 12.5 }}>
+            {cfg.interval_minutes > 0 ? (
+              <span style={{ color: "var(--accent-2)" }}>
+                ✓ On — backs up {fmtInterval(cfg.interval_minutes)}
+                {nextRun ? ` · next ${fmtClock(nextRun)}` : ""}. Keep the app running (menu-bar tray).
+              </span>
+            ) : "Off — you'll back up manually whenever you like."}
+          </div>
+        ) : (
+          <div className="locked-note">🔒 Automatic backups are a <strong style={{ color: "var(--text)" }}>Pro</strong> feature. Back up manually any time — or unlock Pro above.</div>
+        )}
       </div>
     </>
   );
