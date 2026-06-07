@@ -1,4 +1,4 @@
-import type { Config, JobStatus, Overview, ProjectRow, ProjectSummary, Snapshot } from "./types";
+import type { Config, JobStatus, Overview, ProjectRow, ProjectSummary, Snapshot, VerifyResult } from "./types";
 
 function base() {
   const port = (window as any).ablebackup?.port ?? "8753";
@@ -47,6 +47,7 @@ export function makeApi() {
     async projectDetail(name: string): Promise<{ project_name: string; snapshots: Snapshot[] }> {
       return req("GET", `/api/projects/${encodeURIComponent(name)}`);
     },
+    async verify(id: number): Promise<VerifyResult> { return req("GET", `/api/verify/${id}`); },
   };
 }
 export type Api = ReturnType<typeof makeApi>;

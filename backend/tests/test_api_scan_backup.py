@@ -76,6 +76,27 @@ def test_backup_endpoint_runs_job_to_completion(tmp_path):
     assert snap.exists()
 
 
+def test_verify_endpoint_confirms_snapshot(tmp_path):
+    src = tmp_path / "music"
+    src.mkdir()
+    _build_project(src)
+    dest = tmp_path / "NAS"
+    app = create_app(token="", db_path=tmp_path / "c.db")
+    with TestClient(app) as c:
+        r = c.post("/api/backup", json={"sources": [str(src)], "dest": str(dest),
+                                        "timestamp": "2026-06-06_1430"})
+        job = r.json()["job_id"]
+        for _ in range(100):
+            if c.get(f"/api/jobs/{job}").json()["state"] == "done":
+                break
+            time.sleep(0.05)
+        snaps = c.get("/api/projects/Song").json()["snapshots"]
+        assert snaps[0]["verified"] == 1  # post-backup light verify passed
+        v = c.get(f"/api/verify/{snaps[0]['id']}").json()
+    assert v["ok"] is True
+    assert v["present"] == v["checked"] >= 2
+
+
 def test_backup_only_selected_als_paths(tmp_path):
     src = tmp_path / "music"
     src.mkdir()

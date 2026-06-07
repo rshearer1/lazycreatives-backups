@@ -36,6 +36,7 @@ class BackupResult:
     file_count: int
     total_size: int
     missing: list[str]
+    relinked_count: int = 0
 
 
 def _logical_path(scan: ProjectScan, ref) -> str:
@@ -87,16 +88,22 @@ def backup_project(scan: ProjectScan, dest_root: Path, timestamp: str,
     temp_dir.mkdir(parents=True)
 
     total_size = 0
-    file_count = 0
     missing: list[str] = []
     placed: dict[str, str] = {}  # logical path -> file digest, to handle collisions
+    files: list[dict] = []       # per-file manifest entries, for later verification
+
+    def record(logical, digest, size, source, inside, relinked):
+        files.append({
+            "logical_path": logical, "digest": digest, "size": size,
+            "source_path": source, "inside_project": inside, "relinked": relinked,
+        })
 
     # The .als itself.
     als_digest = hash_file(scan.als_path)
-    total_size += _place(pool, scan.als_path, temp_dir / scan.als_path.name,
-                         use_hardlinks, als_digest)
+    sz = _place(pool, scan.als_path, temp_dir / scan.als_path.name, use_hardlinks, als_digest)
+    total_size += sz
     placed[scan.als_path.name] = als_digest
-    file_count += 1
+    record(scan.als_path.name, als_digest, sz, str(scan.als_path), True, False)
 
     # Each resolved reference.
     for ref in scan.refs:
@@ -112,11 +119,13 @@ def backup_project(scan: ProjectScan, dest_root: Path, timestamp: str,
             logical = _disambiguate(logical, digest)
             if placed.get(logical) == digest:
                 continue  # this exact different-content file already disambiguated+placed
-        total_size += _place(pool, ref.resolved_path, temp_dir / logical,
-                             use_hardlinks, digest)
+        sz = _place(pool, ref.resolved_path, temp_dir / logical, use_hardlinks, digest)
+        total_size += sz
         placed[logical] = digest
-        file_count += 1
+        record(logical, digest, sz, str(ref.resolved_path), ref.inside_project, ref.relinked)
 
+    file_count = len(files)
+    relinked_count = sum(1 for f in files if f["relinked"])
     manifest = {
         "project_name": scan.name,
         "timestamp": timestamp,
@@ -126,6 +135,7 @@ def backup_project(scan: ProjectScan, dest_root: Path, timestamp: str,
         "used_hardlinks": use_hardlinks,
         "portable": portable,
         "layout": layout,
+        "files": files,
     }
     (temp_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
@@ -140,4 +150,5 @@ def backup_project(scan: ProjectScan, dest_root: Path, timestamp: str,
         file_count=file_count,
         total_size=total_size,
         missing=missing,
+        relinked_count=relinked_count,
     )
