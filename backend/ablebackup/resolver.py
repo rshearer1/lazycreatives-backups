@@ -40,6 +40,23 @@ def _path_tail_score(ref_path: str, cand: Path) -> int:
     return n
 
 
+# Media extensions a project may legitimately reference from OUTSIDE its own
+# folder. A file resolving outside the project with any other extension is refused
+# (treated as missing) so a crafted/received project can't pull arbitrary readable
+# files — ~/.ssh/id_rsa, ~/.aws/credentials, etc. — into the backup via _External.
+# Files INSIDE the project folder are unrestricted (they're the user's own).
+_EXTERNAL_MEDIA_EXTS = {
+    ".wav", ".aif", ".aiff", ".aifc", ".flac", ".mp3", ".ogg", ".oga", ".opus",
+    ".m4a", ".aac", ".alac", ".wma", ".wv", ".caf", ".ape", ".mp2", ".w64",
+    ".au", ".snd", ".rex", ".rx2", ".sf2", ".sfz", ".asd", ".nki", ".exs",
+    ".mov", ".mp4", ".m4v", ".avi", ".mkv", ".mpg", ".mpeg", ".webm",
+}
+
+
+def _allowed_external_file(path: Path) -> bool:
+    return path.suffix.lower() in _EXTERNAL_MEDIA_EXTS
+
+
 def _match_located(ref: FileRef, locate: Locator) -> Optional[Path]:
     """Pick a library file that genuinely matches the referenced sample.
 
@@ -101,20 +118,27 @@ def resolve_refs(refs: list[FileRef], project_dir: Path,
             if found is not None:
                 chosen = found
                 relinked = True
+        inside = False
         if chosen is not None:
             # Resolve chosen once and reuse for both the dedup key and the
             # inside-project test (was resolved twice: here and inside _is_inside).
             chosen_real = chosen.resolve()
-            key = str(chosen_real)
-            if key in seen:
-                continue
-            seen.add(key)
-            st = chosen.stat()
             try:
                 chosen_real.relative_to(project_real)
                 inside = True
             except ValueError:
                 inside = False
+            # Security: a file outside the project must be a media sample, never an
+            # arbitrary readable file a crafted project points at.
+            if not inside and not _allowed_external_file(chosen):
+                chosen = None
+
+        if chosen is not None:
+            key = str(chosen_real)
+            if key in seen:
+                continue
+            seen.add(key)
+            st = chosen.stat()
             resolved.append(ResolvedRef(
                 name=ref.name or chosen.name,
                 resolved_path=chosen,

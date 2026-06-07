@@ -17,6 +17,12 @@ from ablebackup.models import FileRef
 _AUDIO_EXTS = (".wav", ".aif", ".aiff", ".flac", ".mp3", ".ogg", ".m4a", ".wv", ".aac")
 
 
+# A .dawproject is attacker-supplyable (it's exactly what 'share' exchanges), so
+# guard the project.xml member against a decompression bomb before reading it.
+_MAX_XML_BYTES = 64 * 1024 * 1024
+_MAX_XML_RATIO = 200
+
+
 def read_sample_paths(dawproject_path) -> list[str]:
     """External audio paths referenced by a .dawproject (embedded media excluded)."""
     with zipfile.ZipFile(dawproject_path) as z:
@@ -25,6 +31,10 @@ def read_sample_paths(dawproject_path) -> list[str]:
                     else next((n for n in members if n.endswith(".xml")), None))
         if xml_name is None:
             return []
+        info = z.getinfo(xml_name)
+        if (info.file_size > _MAX_XML_BYTES
+                or info.file_size / max(info.compress_size, 1) > _MAX_XML_RATIO):
+            raise ValueError("dawproject XML too large (possible zip bomb)")
         root = ET.fromstring(z.read(xml_name))
 
     out: list[str] = []

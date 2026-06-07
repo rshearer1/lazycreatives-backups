@@ -7,6 +7,20 @@ from ablebackup.verifier import verify_snapshot
 from tests.helpers import write_als, fileref_abs, fileref_rel
 
 
+def test_crafted_project_cannot_pull_a_non_media_file(tmp_path):
+    # A received/malicious project referencing a secret outside its folder must NOT
+    # pull that file into the backup (info-disclosure guard).
+    secret = tmp_path / "secret.key"
+    secret.write_text("PRIVATE KEY")
+    proj = tmp_path / "Song Project"
+    proj.mkdir()
+    write_als(proj / "Song.als", [fileref_abs(str(secret), "secret.key")])
+
+    scan = scan_one(proj / "Song.als")
+    assert not any(r.exists and r.resolved_path == secret for r in scan.refs)  # refused
+    assert any(not r.exists for r in scan.refs)                                # marked missing
+
+
 def test_portable_keeps_same_basename_externals_distinct(tmp_path):
     # Two different samples both named kick.wav from different libraries: the
     # portable .als must point each ref at a DISTINCT stored file (regression for
