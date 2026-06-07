@@ -99,6 +99,24 @@ export function Home({ backup, onBackupNow, onOpenSettings, onResumeProgress }: 
               hint={ov.last_run_ok ? "✓ all ok" : "⚠ check results"} tone={ov.last_run_ok ? undefined : "var(--warn)"} />
           </div>
 
+          {ov.pool_known && ov.logical_size > 0 && ov.saved_bytes > 0 && (
+            <div className="card" style={{ marginBottom: 18 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 9 }}>
+                <strong>Deduplication</strong>
+                <span className="sub" style={{ margin: 0, color: "var(--accent-2)" }}>
+                  {fmtSize(ov.saved_bytes)} saved · {savedPct}% smaller
+                </span>
+              </div>
+              <div className="dedupbar">
+                <div className="dedupbar__actual" style={{ width: `${Math.max(3, Math.round((ov.actual_size / ov.logical_size) * 100))}%` }} />
+              </div>
+              <div className="sub" style={{ margin: "7px 0 0", fontSize: 11.5, display: "flex", justifyContent: "space-between" }}>
+                <span>{fmtSize(ov.actual_size)} actually stored</span>
+                <span>{fmtSize(ov.logical_size)} across all snapshots</span>
+              </div>
+            </div>
+          )}
+
           <div className="card" style={{ marginBottom: 18, borderColor: ov.attention.length ? "var(--warn)" : "var(--border)" }}>
             <strong style={{ color: ov.attention.length ? "var(--warn)" : "var(--text)" }}>
               {ov.attention.length ? `⚠ ${ov.attention.length} need attention` : "✓ All projects healthy"}

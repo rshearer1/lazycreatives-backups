@@ -2,6 +2,8 @@ import { useState } from "react";
 import { makeApi } from "../api";
 import type { Config } from "../types";
 import { Button } from "../components/Button";
+import { BrandMark } from "../components/BrandMark";
+import { Waveform } from "../components/Waveform";
 
 const api = makeApi();
 
@@ -33,9 +35,13 @@ export function Setup({ onDone }: { onDone: (c: Config) => void }) {
   return (
     <div className="splash">
       <div className="wizard">
+        <div className="wizard__wave"><Waveform bars={64} /></div>
         <div className="wizard__head">
-          <div className="nav__logo">LC</div>
-          <div style={{ flex: 1 }}><strong>LazyCreatives Backups</strong></div>
+          <div className="nav__logo" style={{ width: 34, height: 38 }}><BrandMark /></div>
+          <div style={{ flex: 1 }}>
+            <strong>LazyCreatives <span style={{ color: "var(--accent)" }}>Backups</span></strong>
+            <div className="sub" style={{ margin: 0, fontSize: 12 }}>Verified backups you own</div>
+          </div>
           <span className="sub" style={{ margin: 0 }}>Step {step + 1} of 3</span>
         </div>
         <div className="wizard__dots">
