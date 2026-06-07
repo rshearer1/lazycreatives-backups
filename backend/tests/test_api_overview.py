@@ -48,8 +48,21 @@ def test_overview_nas_reachable_and_dedup(tmp_path):
     (pool / "abcd").write_bytes(b"x" * 200)
     cat.set_setting("config", {"sources": [], "dest": str(dest), "interval_minutes": 60})
 
+    # Pool size is read from cache (computed in the background), so populate it first.
+    from ablebackup.service import refresh_pool_cache
+    refresh_pool_cache(cat, str(dest))
+
     data = c.get("/api/overview").json()
     assert data["nas"]["reachable"] is True
+    assert data["pool_known"] is True
     assert data["actual_size"] == 200
     assert data["saved_bytes"] == 800  # logical 1000 - actual 200
     assert data["schedule"] == {"enabled": True, "interval_minutes": 60, "next_run": None}
+
+
+def test_overview_pool_unknown_until_cached(tmp_path):
+    c, cat = _client(tmp_path)
+    cat.record_snapshot("Alpha", "2026-06-01_1000", 1000, 5, "ok", [])
+    data = c.get("/api/overview").json()
+    assert data["pool_known"] is False     # no walk yet -> reported as not-yet-known
+    assert data["saved_bytes"] == 0        # don't claim savings we haven't measured

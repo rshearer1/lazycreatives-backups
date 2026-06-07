@@ -2,6 +2,7 @@
 import hashlib
 import os
 import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
@@ -89,8 +90,28 @@ def _pool_size(dest_root: Path) -> int:
     return total
 
 
+def refresh_pool_cache(catalog: Catalog, dest: str) -> int:
+    """Walk the dedup pool (slow over a NAS) and cache the total, so the dashboard
+    can read it instantly. Called in the background after backups and when stale."""
+    if not dest or not Path(dest).is_dir():
+        return 0
+    total = sum(_pool_size(Path(dest) / a.backup_root) for a in DAW_REGISTRY)
+    catalog.set_setting("pool_cache", {"actual_size": total, "at": time.time()})
+    return total
+
+
+def pool_cache_age(catalog: Catalog) -> Optional[float]:
+    """Seconds since the pool size was last computed, or None if never."""
+    cache = catalog.get_setting("pool_cache") or {}
+    return time.time() - cache["at"] if "at" in cache else None
+
+
 def build_overview(catalog: Catalog, dest: str) -> dict:
-    """A health snapshot for the dashboard: totals, dedup savings, NAS status, attention."""
+    """A health snapshot for the dashboard: totals, dedup savings, NAS status, attention.
+
+    The pool size is read from cache (refresh_pool_cache populates it in the
+    background) — walking the pool on every load made the NAS dashboard take ~15s.
+    """
     totals = catalog.snapshot_totals()
     latest = catalog.latest_per_project()
 
@@ -108,19 +129,20 @@ def build_overview(catalog: Catalog, dest: str) -> dict:
     last = latest[0] if latest else None
 
     nas = {"reachable": False, "path": "", "free_bytes": 0, "total_bytes": 0}
-    actual_size = 0
     if dest:
         nas["path"] = str(dest)
         if Path(dest).is_dir():
             nas["reachable"] = True
             try:
-                usage = shutil.disk_usage(dest)
+                usage = shutil.disk_usage(dest)  # one statvfs — fast
                 nas["free_bytes"] = usage.free
                 nas["total_bytes"] = usage.total
             except OSError:
                 pass
-            # Sum the dedup pool across every DAW's backup root (per-DAW separation).
-            actual_size = sum(_pool_size(Path(dest) / a.backup_root) for a in DAW_REGISTRY)
+
+    cache = catalog.get_setting("pool_cache") or {}
+    pool_known = "actual_size" in cache
+    actual_size = int(cache.get("actual_size", 0))
 
     logical_size = totals["logical_size"]
     return {
@@ -128,7 +150,8 @@ def build_overview(catalog: Catalog, dest: str) -> dict:
         "snapshot_count": totals["snapshot_count"],
         "logical_size": logical_size,
         "actual_size": actual_size,
-        "saved_bytes": max(0, logical_size - actual_size),
+        "saved_bytes": max(0, logical_size - actual_size) if pool_known else 0,
+        "pool_known": pool_known,  # false until the first background walk finishes
         "last_run": last["timestamp"] if last else None,
         "last_run_ok": bool(last) and last["status"] == "ok",
         "attention": attention,
