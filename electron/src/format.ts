@@ -42,6 +42,7 @@ export function fmtDate(ts: string | null | undefined): string {
 export function dawLabel(daw?: string): string {
   return daw === "flstudio" ? "FL"
     : daw === "reaper" ? "RPR"
+    : daw === "dawproject" ? "DP"
     : daw === "ableton" ? "Live" : "DAW";
 }
 

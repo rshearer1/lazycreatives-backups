@@ -4,11 +4,14 @@ from typing import Optional
 
 from ablebackup.daws.ableton import AbletonAdapter
 from ablebackup.daws.base import DawAdapter
+from ablebackup.daws.dawproject import DawprojectAdapter
 from ablebackup.daws.flstudio import FlStudioAdapter
 from ablebackup.daws.reaper import ReaperAdapter
 
 # New DAWs register by adding one adapter and one entry here — nothing else changes.
-DAW_REGISTRY: list[DawAdapter] = [AbletonAdapter(), FlStudioAdapter(), ReaperAdapter()]
+DAW_REGISTRY: list[DawAdapter] = [
+    AbletonAdapter(), FlStudioAdapter(), ReaperAdapter(), DawprojectAdapter(),
+]
 
 _BY_EXT = {ext.lower(): a for a in DAW_REGISTRY for ext in a.extensions}
 _BY_ID = {a.daw_id: a for a in DAW_REGISTRY}
