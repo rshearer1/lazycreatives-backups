@@ -4,6 +4,7 @@ import type { Config } from "../types";
 import type { PendingBackup } from "../App";
 import { Button } from "../components/Button";
 import { PageHeader } from "../components/PageHeader";
+import { Info } from "../components/Info";
 import { fmtSize } from "../format";
 
 const api = makeApi();
@@ -70,15 +71,16 @@ export function Review({ pending, onStarted, onCancel }: {
       </div>
 
       <div className="card" style={{ marginBottom: 14 }}>
-        <h2>Portability</h2>
+        <h2 style={{ display: "flex", alignItems: "center" }}>Opening on another computer
+          <Info text="Portable rewrites the project so its gathered samples load on any machine. Copy-as-is keeps the original layout, but samples from other folders may show as missing elsewhere." /></h2>
         <div className="seg" role="group">
-          <button className={`seg__opt${portable ? " seg__opt--on" : ""}`} onClick={() => setPortable(true)}>Portable</button>
-          <button className={`seg__opt${!portable ? " seg__opt--on" : ""}`} onClick={() => setPortable(false)}>Archive</button>
+          <button className={`seg__opt${portable ? " seg__opt--on" : ""}`} onClick={() => setPortable(true)}>Opens anywhere</button>
+          <button className={`seg__opt${!portable ? " seg__opt--on" : ""}`} onClick={() => setPortable(false)}>Copy as-is</button>
         </div>
         <p className="sub" style={{ margin: "10px 0 0", fontSize: 12.5 }}>
           {portable
-            ? "Rewrites the project so it opens on any machine — external samples collected in and re-linked (Ableton)."
-            : "Copies everything as-is; opened elsewhere, external samples may show as missing."}
+            ? "Recommended — the backup opens with all its samples on any computer (Ableton)."
+            : "Copies everything exactly as it is now; opened elsewhere, samples from other folders may show as missing."}
         </p>
       </div>
 

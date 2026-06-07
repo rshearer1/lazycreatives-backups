@@ -57,6 +57,22 @@ export default function App() {
     prevDone.current = live.backup.done;
   }, [live.backup.done, live.backup.completed, live.backup.errors, live.backup.cancelled]);
 
+  // One-click backup: start straight from Scan with smart defaults (opens-anywhere
+  // + gather-missing), skipping the Review step. Falls back to Review on error.
+  async function launchBackup(p: PendingBackup) {
+    try {
+      const { job_id } = await api.startBackup({
+        als_paths: p.als_paths, find_missing: p.findMissing,
+        portable: true, layout: "project_date",
+      });
+      setActiveJob(job_id);
+      setFlow("progress");
+    } catch {
+      setPending(p);
+      setFlow("review");
+    }
+  }
+
   if (cfg === null) return (
     <div className="splash">
       <div style={{ display: "grid", placeItems: "center", gap: 14 }}>
@@ -96,6 +112,7 @@ export default function App() {
               backup={live.backup}
               pending={pending}
               activeJob={activeJob}
+              onBackup={launchBackup}
               onReview={(p) => { setPending(p); setFlow("review"); }}
               onStarted={(jobId) => { setActiveJob(jobId); setFlow("progress"); }}
               onBackToScan={() => setFlow("scan")}

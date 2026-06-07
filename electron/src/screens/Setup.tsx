@@ -81,7 +81,7 @@ export function Setup({ onDone }: { onDone: (c: Config) => void }) {
         {step === 2 && (
           <div className="wizard__body">
             <h1>Where should backups go?</h1>
-            <p className="sub">Pick a mounted NAS folder (or any drive). This is where your snapshots live.</p>
+            <p className="sub">Pick a mounted NAS folder (or any drive). This is where your backups live — you own it, no cloud.</p>
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               <input readOnly value={dest} placeholder="No destination set"
                 style={{ flex: 1, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)", padding: "10px 12px", borderRadius: 8 }} />

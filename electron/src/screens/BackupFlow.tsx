@@ -14,7 +14,7 @@ const STEPS: { id: FlowStep; label: string }[] = [
 const order = (s: FlowStep) => STEPS.findIndex((x) => x.id === s);
 
 export function BackupFlow({ step, projects, onProjects, scan, backup, pending, activeJob,
-  onReview, onStarted, onBackToScan, onExit }: {
+  onBackup, onReview, onStarted, onBackToScan, onExit }: {
   step: FlowStep;
   projects: ProjectSummary[] | null;
   onProjects: (p: ProjectSummary[] | null) => void;
@@ -22,6 +22,7 @@ export function BackupFlow({ step, projects, onProjects, scan, backup, pending, 
   backup: BackupProgress;
   pending: PendingBackup | null;
   activeJob: string | null;
+  onBackup: (p: PendingBackup) => void;
   onReview: (p: PendingBackup) => void;
   onStarted: (jobId: string) => void;
   onBackToScan: () => void;
@@ -45,7 +46,7 @@ export function BackupFlow({ step, projects, onProjects, scan, backup, pending, 
       </div>
 
       {step === "scan" && (
-        <Scan projects={projects} onProjects={onProjects} scan={scan} onReview={onReview} />
+        <Scan projects={projects} onProjects={onProjects} scan={scan} onBackup={onBackup} onReview={onReview} />
       )}
       {step === "review" && (
         <Review pending={pending} onStarted={onStarted} onCancel={onBackToScan} />

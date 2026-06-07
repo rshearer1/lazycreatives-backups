@@ -5,17 +5,18 @@ import type { BackupProgress } from "../useProgress";
 import { Button } from "../components/Button";
 import { PageHeader } from "../components/PageHeader";
 import { CountUp } from "../components/CountUp";
+import { Info } from "../components/Info";
 import { fmtSize, fmtDate, fmtInterval, fmtClock, shortPath } from "../format";
 import type { ReactNode, CSSProperties } from "react";
 
 const api = makeApi();
 
-function Tile({ label, value, hint, tone, index = 0 }: {
-  label: string; value: ReactNode; hint?: string; tone?: string; index?: number;
+function Tile({ label, value, hint, tone, index = 0, info }: {
+  label: string; value: ReactNode; hint?: string; tone?: string; index?: number; info?: string;
 }) {
   return (
     <div className="tile tile--enter" style={{ "--i": index } as CSSProperties}>
-      <div className="tile__label">{label}</div>
+      <div className="tile__label">{label}{info && <Info text={info} />}</div>
       <div className="tile__value" style={{ color: tone }}>{value}</div>
       {hint && <div className="tile__hint">{hint}</div>}
     </div>
@@ -88,13 +89,16 @@ export function Home({ backup, onBackupNow, onOpenSettings, onResumeProgress }: 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 18 }}>
             <Tile index={0} label="Protected"
               value={<CountUp value={ov.projects_protected} format={(n) => `${Math.round(n)} projects`} />}
-              hint={`${ov.snapshot_count} snapshots`} />
-            <Tile index={1} label="On NAS"
+              hint={`${ov.snapshot_count} backup${ov.snapshot_count === 1 ? "" : "s"}`}
+              info="Projects you've backed up at least once. Each time you back one up, it keeps a dated version." />
+            <Tile index={1} label="On your drive"
               value={ov.pool_known ? <CountUp value={ov.actual_size} format={fmtSize} /> : <span className="shimmer">calculating…</span>}
-              hint={ov.nas.reachable ? `${fmtSize(ov.nas.free_bytes)} free` : "NAS offline"} />
-            <Tile index={2} label="Saved by dedup"
+              hint={ov.nas.reachable ? `${fmtSize(ov.nas.free_bytes)} free` : "drive offline"}
+              info="How much space your backups take on your own NAS/drive. No cloud, no subscription — it's all yours." />
+            <Tile index={2} label="Space saved"
               value={ov.pool_known ? <CountUp value={ov.saved_bytes} format={fmtSize} /> : <span className="shimmer">…</span>}
-              hint={ov.pool_known && savedPct > 0 ? `${savedPct}% smaller` : "—"} tone="var(--accent-2)" />
+              hint={ov.pool_known && savedPct > 0 ? `${savedPct}% smaller` : "—"} tone="var(--accent-2)"
+              info="We store each file once, even when many backups use it — so your backups take far less space than copying everything every time." />
             <Tile index={3} label="Last backup" value={fmtDate(ov.last_run)}
               hint={ov.last_run_ok ? "✓ all ok" : "⚠ check results"} tone={ov.last_run_ok ? undefined : "var(--warn)"} />
           </div>
@@ -102,7 +106,8 @@ export function Home({ backup, onBackupNow, onOpenSettings, onResumeProgress }: 
           {ov.pool_known && ov.logical_size > 0 && ov.saved_bytes > 0 && (
             <div className="card" style={{ marginBottom: 18 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 9 }}>
-                <strong>Deduplication</strong>
+                <strong style={{ display: "flex", alignItems: "center" }}>Space saved
+                  <Info text="Your backups would take this much if every version copied everything. Because we store each file once, they actually take far less." /></strong>
                 <span className="sub" style={{ margin: 0, color: "var(--accent-2)" }}>
                   {fmtSize(ov.saved_bytes)} saved · {savedPct}% smaller
                 </span>
@@ -112,7 +117,7 @@ export function Home({ backup, onBackupNow, onOpenSettings, onResumeProgress }: 
               </div>
               <div className="sub" style={{ margin: "7px 0 0", fontSize: 11.5, display: "flex", justifyContent: "space-between" }}>
                 <span>{fmtSize(ov.actual_size)} actually stored</span>
-                <span>{fmtSize(ov.logical_size)} across all snapshots</span>
+                <span>{fmtSize(ov.logical_size)} if copied in full</span>
               </div>
             </div>
           )}

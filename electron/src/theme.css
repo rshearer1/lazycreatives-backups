@@ -298,6 +298,26 @@ select { cursor: pointer; }
   }
 }
 
+/* ---- "what's this?" info tooltip ---- */
+.info {
+  display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%;
+  font-size: 9.5px; font-style: italic; font-weight: 700; line-height: 1;
+  color: var(--text-faint); border: 1px solid var(--border-strong); cursor: help;
+  margin-left: 5px; position: relative; vertical-align: middle; flex-shrink: 0;
+}
+.info:hover, .info:focus { color: var(--accent); border-color: var(--accent); outline: none; }
+.info::after {
+  content: attr(data-tip); position: absolute; z-index: 60;
+  background: var(--surface-3); color: var(--text); border: 1px solid var(--border-strong);
+  border-radius: 9px; padding: 9px 11px; width: max-content; max-width: 230px;
+  font-size: 12px; font-style: normal; font-weight: 400; line-height: 1.45; text-align: left;
+  white-space: normal; box-shadow: var(--shadow); opacity: 0; pointer-events: none;
+  transition: opacity .12s ease; transform: translateX(-50%);
+  bottom: 150%; left: 50%;
+}
+.info--left::after { bottom: 50%; left: auto; right: 150%; transform: translateY(50%); }
+.info:hover::after, .info:focus::after { opacity: 1; }
+
 /* ---- Scan toolbar + folder groups ---- */
 .toolchk { display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 12.5px; cursor: pointer; white-space: nowrap; }
 .foldergroup__head { display: flex; align-items: center; gap: 9px; padding: 7px 4px; }

@@ -12,10 +12,11 @@ import { fmtSize, dawLabel } from "../format";
 const api = makeApi();
 type SortKey = "name" | "recent" | "size" | "issues";
 
-export function Scan({ projects, onProjects, scan, onReview }: {
+export function Scan({ projects, onProjects, scan, onBackup, onReview }: {
   projects: ProjectSummary[] | null;
   onProjects: (p: ProjectSummary[] | null) => void;
   scan: ScanProgress;
+  onBackup: (p: PendingBackup) => void;
   onReview: (p: PendingBackup) => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -96,14 +97,14 @@ export function Scan({ projects, onProjects, scan, onReview }: {
   }
   const allVisibleSelected = visible.length > 0 && selectedVisible === visible.length;
 
-  function review() {
+  function buildPending(): PendingBackup {
     const chosen = (projects ?? []).filter((p) => selected.has(p.als_path));
-    onReview({
+    return {
       als_paths: chosen.map((p) => p.als_path),
       count: chosen.length,
       size: chosen.reduce((a, p) => a + p.total_size, 0),
       findMissing,
-    });
+    };
   }
 
   const scanning = busy || scan.active;
@@ -120,9 +121,12 @@ export function Scan({ projects, onProjects, scan, onReview }: {
               {scanning ? "Scanning…" : projects ? "Rescan" : "Scan now"}
             </Button>
             {hasProjects && (
-              <Button onClick={review} disabled={selected.size === 0}>
-                Back up {selected.size} · {fmtSize(selectedTotalSize)}
-              </Button>
+              <>
+                <Button variant="ghost" size="sm" onClick={() => onReview(buildPending())} disabled={selected.size === 0}>Options…</Button>
+                <Button onClick={() => onBackup(buildPending())} disabled={selected.size === 0}>
+                  Back up {selected.size} · {fmtSize(selectedTotalSize)}
+                </Button>
+              </>
             )}
           </>
         }
@@ -133,7 +137,7 @@ export function Scan({ projects, onProjects, scan, onReview }: {
       <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 2px 14px", color: "var(--text-dim)", fontSize: 13, cursor: "pointer" }}>
         <input type="checkbox" checked={findMissing} onChange={(e) => setFindMissing(e.target.checked)} />
         Find missing samples in my library
-        {relinkedTotal > 0 && <span style={{ color: "var(--accent-2)" }}>· {relinkedTotal} relinked</span>}
+        {relinkedTotal > 0 && <span style={{ color: "var(--accent-2)" }}>· {relinkedTotal} auto-found</span>}
       </label>
 
       {scanning && (
@@ -212,7 +216,7 @@ export function Scan({ projects, onProjects, scan, onReview }: {
                           </span>
                         </div>
                         {!groupByFolder && <div className="sub" style={{ margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.project_dir}</div>}
-                        {p.relinked_count > 0 && <div style={{ marginTop: 5, color: "var(--accent-2)", fontSize: 12 }}>✓ {p.relinked_count} relinked from library</div>}
+                        {p.relinked_count > 0 && <div style={{ marginTop: 5, color: "var(--accent-2)", fontSize: 12 }}>✓ {p.relinked_count} auto-found in your library</div>}
                         {p.missing_count > 0 && (
                           <div style={{ marginTop: 6 }}>
                             <button className="linkbtn badge-warn" onClick={() => toggleExpand(p.als_path)}>

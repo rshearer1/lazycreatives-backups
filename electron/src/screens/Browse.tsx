@@ -136,7 +136,7 @@ export function Browse() {
           <option value="recent">Recently backed up</option>
           <option value="name">Name (A–Z)</option>
           <option value="size">Size</option>
-          <option value="snapshots">Most snapshots</option>
+          <option value="snapshots">Most backups</option>
         </select>
         {daws.length > 1 && (
           <div className="seg">
@@ -164,7 +164,7 @@ export function Browse() {
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.project_name}</span>
                 </strong>
                 <span className="sub" style={{ margin: 0 }}>
-                  {p.snapshot_count} snapshot{p.snapshot_count === 1 ? "" : "s"} · {fmtSize(p.total_size)}
+                  {p.snapshot_count} backup{p.snapshot_count === 1 ? "" : "s"} · {fmtSize(p.total_size)}
                 </span>
               </div>
             </button>
