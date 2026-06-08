@@ -38,5 +38,6 @@ def test_project_detail_includes_snapshot_dir(tmp_path):
     c = _client(tmp_path)
     c.put("/api/settings", json={"sources": [], "dest": "/Volumes/NAS", "interval_minutes": 0})
     detail = c.get("/api/projects/Alpha").json()
-    dirs = {s["timestamp"]: s["dir"] for s in detail["snapshots"]}
+    # normalise separators so the assertion holds on Windows too (dir is OS-native)
+    dirs = {s["timestamp"]: s["dir"].replace("\\", "/") for s in detail["snapshots"]}
     assert dirs["2026-06-01_1000"] == "/Volumes/NAS/AbletonBackups/projects/Alpha/2026-06-01_1000"

@@ -144,7 +144,7 @@ def test_run_backup_records_label_and_layout(tmp_path):
     row = cat.snapshots_for("Song")[0]
     assert row["label"] == "pre-mix"
     assert (dest / "AbletonBackups" / "by-date" / "t" / "Song" / "Song.als").exists()
-    assert row["dir"].endswith("by-date/t/Song")
+    assert row["dir"].replace("\\", "/").endswith("by-date/t/Song")  # OS-native separators
     cat.close()
 
 
