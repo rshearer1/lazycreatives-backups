@@ -18,8 +18,8 @@ from ablebackup.catalog import Catalog
 from ablebackup.scheduler import BackupScheduler
 from ablebackup.service import (
     build_overview, default_timestamp, pool_cache_age, rclone_available,
-    rclone_remotes, refresh_pool_cache, restore_snapshot, run_backup, scan_summary,
-    share_snapshot, snapshot_diff,
+    backfill_genres, project_genres, rclone_remotes, refresh_pool_cache,
+    restore_snapshot, run_backup, scan_summary, share_snapshot, snapshot_diff,
 )
 from ablebackup.verifier import verify_snapshot
 
@@ -88,6 +88,29 @@ def create_app(token: str, db_path: Path) -> FastAPI:
                 await asyncio.to_thread(refresh_pool_cache, app.state.catalog, dest)
             finally:
                 app.state.pool_refreshing = False
+
+        t = asyncio.create_task(_run())
+        app.state.pool_tasks.add(t)
+        t.add_done_callback(app.state.pool_tasks.discard)
+
+    app.state.genre_backfilling = False
+
+    def _backfill_genres_async():
+        """Fill uncached project genres off the request path (reading .als tempos is
+        slow). One at a time; cached results make subsequent loads instant."""
+        if app.state.genre_backfilling:
+            return
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return  # no event loop (e.g. bare TestClient) — skip background work
+        app.state.genre_backfilling = True
+
+        async def _run():
+            try:
+                await asyncio.to_thread(backfill_genres, app.state.catalog)
+            finally:
+                app.state.genre_backfilling = False
 
         t = asyncio.create_task(_run())
         app.state.pool_tasks.add(t)
@@ -273,7 +296,19 @@ def create_app(token: str, db_path: Path) -> FastAPI:
 
     @app.get("/api/projects", dependencies=[Depends(require_token)])
     def projects():
-        return {"projects": app.state.catalog.projects_summary()}
+        rows = app.state.catalog.projects_summary()
+        genres = project_genres(app.state.catalog)  # cached only — never blocks
+        pending = 0
+        for r in rows:
+            g = genres.get(r["project_name"])
+            if g:
+                r.update(genre=g["genre"], genre_emoji=g["emoji"],
+                         bpm=g["bpm"], genre_confidence=g["confidence"],
+                         genre_pending=g["pending"])
+                pending += 1 if g["pending"] else 0
+        if pending:
+            _backfill_genres_async()  # fill the rest in the background
+        return {"projects": rows, "genres_pending": pending}
 
     @app.get("/api/projects/{name}", dependencies=[Depends(require_token)])
     def project_detail(name: str):

@@ -54,7 +54,10 @@ class Catalog:
         cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(snapshots)")}
         new = {"label": "TEXT", "dir": "TEXT", "signature": "TEXT",
                "relinked_count": "INTEGER", "verified": "INTEGER", "verified_at": "TEXT",
-               "project_id": "TEXT", "daw": "TEXT"}
+               "project_id": "TEXT", "daw": "TEXT",
+               # guessed genre (cached per snapshot; genre_done marks it computed)
+               "genre": "TEXT", "bpm": "REAL", "genre_conf": "REAL",
+               "genre_done": "INTEGER"}
         for col, typ in new.items():
             if col not in cols:
                 self.conn.execute(f"ALTER TABLE snapshots ADD COLUMN {col} {typ}")
@@ -215,6 +218,7 @@ class Catalog:
         with self._lock:
             rows = self.conn.execute(
                 "SELECT s.id, s.project_name, s.timestamp, s.status, s.error, "
+                "s.dir, s.daw, s.genre, s.bpm, s.genre_conf, s.genre_done, "
                 "(SELECT COUNT(*) FROM missing_refs m WHERE m.snapshot_id = s.id) "
                 "  AS missing_count "
                 "FROM snapshots s "
@@ -224,6 +228,16 @@ class Catalog:
                 "ORDER BY s.timestamp DESC, s.id DESC"
             ).fetchall()
         return [dict(r) for r in rows]
+
+    def set_genre(self, snapshot_id, genre, bpm, confidence) -> None:
+        """Cache a snapshot's guessed genre so it isn't recomputed each load."""
+        with self._lock:
+            self.conn.execute(
+                "UPDATE snapshots SET genre = ?, bpm = ?, genre_conf = ?, genre_done = 1 "
+                "WHERE id = ?",
+                (genre, bpm, confidence, snapshot_id),
+            )
+            self.conn.commit()
 
     def close(self):
         with self._lock:

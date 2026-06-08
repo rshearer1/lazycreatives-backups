@@ -115,6 +115,63 @@ def mirror_snapshot(snapshot_dir: Path, base: Path, mirrors: list) -> tuple[int,
     return ok, failed
 
 
+def _genre_for_snapshot(snapshot_dir, project_name: str) -> dict:
+    """Guess a snapshot's genre from its .als tempo + gathered sample names + name."""
+    from ablebackup.als_parser import read_tempo
+    from ablebackup.genre import guess_genre
+
+    d = Path(snapshot_dir) if snapshot_dir else None
+    bpm = None
+    names: list[str] = []
+    if d and d.is_dir():
+        als = next(iter(d.glob("*.als")), None)  # tempo is Ableton-only
+        if als:
+            bpm = read_tempo(als)
+        mf = d / "manifest.json"
+        if mf.is_file():
+            try:
+                names = [Path(f["logical_path"]).name
+                         for f in json.loads(mf.read_text()).get("files", [])]
+            except (OSError, ValueError):
+                pass
+    return guess_genre(project_name, bpm, names)
+
+
+def project_genres(catalog) -> dict:
+    """project_name -> {genre, emoji, bpm, confidence, pending}. Reads ONLY cached
+    genres (fast, no file I/O), so it never blocks a page load; uncached projects
+    come back pending=True and are filled by backfill_genres() in the background."""
+    from ablebackup.genre import emoji_for
+
+    out: dict = {}
+    for row in catalog.latest_per_project():
+        name = row["project_name"]
+        if row.get("genre_done"):
+            out[name] = {"genre": row.get("genre"), "emoji": emoji_for(row.get("genre")),
+                         "bpm": row.get("bpm"), "confidence": row.get("genre_conf") or 0.0,
+                         "pending": False}
+        else:
+            out[name] = {"genre": None, "emoji": "🎵", "bpm": None,
+                         "confidence": 0.0, "pending": True}
+    return out
+
+
+def backfill_genres(catalog) -> int:
+    """Compute + cache genres for any project not yet done. Slow (reads each .als
+    tempo), so call it OFF the request path. Returns how many it filled."""
+    n = 0
+    for row in catalog.latest_per_project():
+        if row.get("genre_done"):
+            continue
+        g = _genre_for_snapshot(row.get("dir"), row["project_name"])
+        try:
+            catalog.set_genre(row["id"], g["genre"], g["bpm"], g["confidence"])
+            n += 1
+        except Exception:
+            pass
+    return n
+
+
 def _manifest_files(snapshot_dir) -> dict | None:
     """logical_path -> file entry for a snapshot's manifest, or None if unreadable."""
     if not snapshot_dir:

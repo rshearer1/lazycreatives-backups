@@ -36,6 +36,11 @@ _GENRES = [
 ]
 
 _NEUTRAL = {"genre": None, "emoji": "🎵", "confidence": 0.0, "alternatives": []}
+_EMOJI = {g: e for g, e, *_ in _GENRES}
+
+
+def emoji_for(genre: str | None) -> str:
+    return _EMOJI.get(genre, "🎵")
 
 
 def guess_genre(name: str, bpm: float | None, sample_names=()) -> dict:

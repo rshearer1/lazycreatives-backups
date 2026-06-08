@@ -9,6 +9,20 @@ import { fmtSize, fmtDate, shortPath, dawLabel, sourceLabel } from "../format";
 const api = makeApi();
 function reveal(p?: string) { if (p) (window as any).ablebackup?.revealPath?.(p); }
 
+// A stable hue per genre so each crate + card has its own visual identity.
+const GENRE_HUE: Record<string, number> = {
+  "Boom bap": 28, "Hip hop": 16, "Lo-fi": 280, "Trap": 348, "Drill": 4, "Phonk": 300,
+  "House": 200, "Tech house": 190, "Techno": 210, "Trance": 250, "UK garage": 150,
+  "Grime": 120, "Dubstep": 95, "DnB": 40, "Jungle": 80, "Hardstyle": 0, "Hyperpop": 320,
+  "Pop": 330, "Ambient": 230,
+};
+function genreHue(genre?: string | null): number {
+  if (!genre) return 220;
+  if (genre in GENRE_HUE) return GENRE_HUE[genre];
+  let h = 0; for (const c of genre) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return h;
+}
+
 function FileGroup({ label, icon, files, snapDir, open, toggle, showSource }: {
   label: string; icon: string; files: SnapshotFile[]; snapDir?: string;
   open: boolean; toggle: () => void; showSource?: boolean;
@@ -38,6 +52,7 @@ function FileGroup({ label, icon, files, snapDir, open, toggle, showSource }: {
 
 export function Browse() {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [mode, setMode] = useState<"crates" | "list">("crates");
   const [query, setQuery] = useState("");
   const [dawFilter, setDawFilter] = useState("all");
   const [sortKey, setSortKey] = useState<"recent" | "name" | "size" | "snapshots">("recent");
@@ -57,6 +72,13 @@ export function Browse() {
   const [shared, setShared] = useState<Record<number, { path?: string; error?: string; note?: string }>>({});
 
   useEffect(() => { api.projects().then(setProjects).catch(() => {}); }, []);
+  // While genres are still being guessed in the background, re-poll so the crates
+  // fill in live without a manual refresh.
+  useEffect(() => {
+    if (!projects.some((p) => p.genre_pending)) return;
+    const t = setTimeout(() => api.projects().then(setProjects).catch(() => {}), 2500);
+    return () => clearTimeout(t);
+  }, [projects]);
   useEffect(() => {
     setSnaps([]); setSelId(null); setFiles(null);
     if (active) api.projectDetail(active).then((d) => {
@@ -85,6 +107,24 @@ export function Browse() {
     }[sortKey];
     return [...f].sort(cmp);
   }, [projects, dawFilter, query, sortKey]);
+
+  // Group the filtered projects into genre "crates", biggest crate first, with an
+  // "Untagged" crate last for anything we couldn't confidently place.
+  const crates = useMemo(() => {
+    const by = new Map<string, ProjectRow[]>();
+    for (const p of filtered) {
+      const key = p.genre || (p.genre_pending ? "…" : "Untagged");
+      (by.get(key) || by.set(key, []).get(key)!).push(p);
+    }
+    return [...by.entries()]
+      .map(([genre, items]) => ({ genre, emoji: items[0]?.genre_emoji || "🎵", items }))
+      .sort((a, b) => {
+        const rank = (g: string) => (g === "Untagged" ? 2 : g === "…" ? 1 : 0);
+        return rank(a.genre) - rank(b.genre) || b.items.length - a.items.length;
+      });
+  }, [filtered]);
+  const tagging = projects.filter((p) => p.genre_pending).length;
+
   const sel = snaps.find((s) => s.id === selId) || null;
 
   const groups = useMemo(() => {
@@ -162,6 +202,10 @@ export function Browse() {
       <PageHeader title="History" subtitle="Every backup — and everything we gathered and tidied inside it." />
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center" }}>
+        <div className="seg">
+          <button className={`seg__opt${mode === "crates" ? " seg__opt--on" : ""}`} onClick={() => { setMode("crates"); setActive(null); }}>🎚 Crates</button>
+          <button className={`seg__opt${mode === "list" ? " seg__opt--on" : ""}`} onClick={() => setMode("list")}>☰ List</button>
+        </div>
         <input className="input" placeholder="Search projects…" value={query}
           onChange={(e) => setQuery(e.target.value)} style={{ flex: 1, maxWidth: 240 }} />
         <select className="input" value={sortKey} onChange={(e) => setSortKey(e.target.value as typeof sortKey)} style={{ width: "auto" }}>
@@ -180,6 +224,63 @@ export function Browse() {
         )}
       </div>
 
+      {mode === "crates" ? (
+        <div style={{ maxHeight: "calc(100vh - 210px)", overflow: "auto", paddingRight: 4 }}>
+          {tagging > 0 && (
+            <div className="sub" style={{ margin: "0 0 12px" }}>
+              🎧 Listening to your projects… tagging {tagging} more by genre.
+            </div>
+          )}
+          {crates.length === 0 && <p className="sub">No projects yet — back one up and it'll land in a crate.</p>}
+          {crates.map(({ genre, emoji, items }) => {
+            const hue = genreHue(genre === "Untagged" || genre === "…" ? null : genre);
+            return (
+              <section key={genre} style={{ marginBottom: 22 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, margin: "0 0 10px" }}>
+                  <span style={{ fontSize: 17 }}>{genre === "…" ? "🎧" : emoji}</span>
+                  <h3 style={{ margin: 0, fontSize: 14, letterSpacing: 0.4, textTransform: "uppercase",
+                    color: genre === "Untagged" || genre === "…" ? "var(--text-dim)" : `hsl(${hue} 70% 68%)` }}>
+                    {genre === "…" ? "Tagging…" : genre}
+                  </h3>
+                  <span className="sub" style={{ margin: 0 }}>· {items.length}</span>
+                  <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(178px, 1fr))", gap: 12 }}>
+                  {items.map((p) => {
+                    const h = genreHue(p.genre);
+                    return (
+                      <button key={p.project_name} onClick={() => { setActive(p.project_name); setMode("list"); }}
+                        className="crate-card"
+                        style={{
+                          textAlign: "left", cursor: "pointer", padding: 0, overflow: "hidden",
+                          borderRadius: 12, border: "1px solid var(--border)", background: "var(--surface)",
+                        }}>
+                        <div style={{ height: 54, background: p.genre
+                          ? `linear-gradient(135deg, hsl(${h} 60% 22%), hsl(${h} 70% 38%))`
+                          : "linear-gradient(135deg, #1a1c22, #2a2d36)",
+                          display: "flex", alignItems: "flex-end", justifyContent: "space-between", padding: "0 10px 6px" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,.92)" }}>
+                            {p.bpm ? `${Math.round(p.bpm)} BPM` : ""}
+                          </span>
+                          <span style={{ fontSize: 16 }}>{p.genre_emoji || "🎵"}</span>
+                        </div>
+                        <div style={{ padding: "9px 11px 11px" }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {p.project_name}
+                          </div>
+                          <div className="sub" style={{ margin: "3px 0 0", fontSize: 11.5 }}>
+                            {p.snapshot_count} backup{p.snapshot_count === 1 ? "" : "s"} · {fmtSize(p.total_size)}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      ) : (
       <div style={{ display: "grid", gridTemplateColumns: "250px 1fr", gap: 18, alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "calc(100vh - 230px)", overflow: "auto" }}>
           {filtered.length === 0 && <p className="sub">No projects.</p>}
@@ -196,6 +297,7 @@ export function Browse() {
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.project_name}</span>
                 </strong>
                 <span className="sub" style={{ margin: 0 }}>
+                  {p.genre && <span style={{ color: `hsl(${genreHue(p.genre)} 65% 66%)` }}>{p.genre_emoji} {p.genre}{p.bpm ? ` · ${Math.round(p.bpm)} BPM` : ""} · </span>}
                   {p.snapshot_count} backup{p.snapshot_count === 1 ? "" : "s"} · {fmtSize(p.total_size)}
                 </span>
               </div>
@@ -330,6 +432,7 @@ export function Browse() {
           )}
         </div>
       </div>
+      )}
     </>
   );
 }

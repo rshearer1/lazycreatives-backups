@@ -72,6 +72,11 @@ export interface ProjectRow {
   last_timestamp: string;
   total_size: number;
   daw?: string;
+  genre?: string | null;
+  genre_emoji?: string;
+  bpm?: number | null;
+  genre_confidence?: number;
+  genre_pending?: boolean;
 }
 export interface AttentionItem {
   project_name: string;
