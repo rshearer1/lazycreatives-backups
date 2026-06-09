@@ -1,6 +1,17 @@
-# LazyCreatives Backups
+<p align="center">
+  <img src="brand/logo.png" alt="Lazy Creatives — Backups" width="380">
+</p>
 
-**Verified, deduplicated backups for your music projects — that you own.**
+<h1 align="center">Lazy Creatives — Backups</h1>
+
+<p align="center"><b>Verified, deduplicated backups for your music projects — that you own.</b></p>
+
+<p align="center">
+  <a href="https://lazycreatives.github.io">Website</a> ·
+  <a href="https://lazycreatives.github.io/lazycreatives-backups/">Product page</a> ·
+  <a href="https://lazycreatives.github.io/lazycreatives-backups/pricing.html">Pricing</a> ·
+  <a href="https://github.com/LazyCreatives/lazycreatives-uploader">Sibling tool: Uploader</a>
+</p>
 
 Point it at your project folders and it finds every session (Ableton & FL Studio),
 follows each one's samples, copies complete de-duplicated snapshots to your own
@@ -8,6 +19,9 @@ NAS/drive, then **re-reads and re-hashes every file to prove the backup actually
 opens**. No cloud, no account — you own the storage.
 
 > Cloud DAW-sync tools can't make these claims structurally. This can.
+
+Part of [**Lazy Creatives**](https://lazycreatives.github.io) — tools that take the boring,
+behind-the-scenes work of making music off your plate. *Looks lazy. Works obsessively.*
 
 ---
 
@@ -89,5 +103,6 @@ cd electron && npm test                          # renderer (api + progress + li
 
 ## Status
 
-Active development. Packaging (installers) is not wired yet — `npm start` runs it
-in dev. See `docs/superpowers/specs/` for the design specs and roadmap.
+Active development — pre-launch. Packaging (installers) isn't wired up yet; `npm start`
+runs it in dev. Star the repo to hear when it ships, and see the
+[brand guide](https://lazycreatives.github.io/brand-guide.html) for the look & feel.
