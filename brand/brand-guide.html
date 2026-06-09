@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lazy Creatives — Brand Sheet</title>
 <style>
+  @font-face{
+    font-family:"Slothy Jelly";  /* the logo typeface — drop the licensed webfont here to render it */
+    src:url("slothy-jelly.woff2") format("woff2"), url("slothy-jelly.ttf") format("truetype");
+    font-display:swap;
+  }
   :root{
     --black:#0A0B0D; --console:#141A20; --panel:#1B242C;
     --blue:#86B3D3;        /* Sloth Blue — from the logo */
@@ -13,6 +18,7 @@
     --ink:#EAF1F7; --muted:#9DB0C0; --line:rgba(134,179,211,.16);
     --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --mono:ui-monospace,SFMono-Regular,Menlo,"Cascadia Mono",monospace;
+    --display:"Slothy Jelly","Inter",sans-serif;  /* logo / display font */
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:
@@ -57,7 +63,7 @@
   .type .r{display:flex;align-items:baseline;gap:18px;padding:15px 0;border-bottom:1px solid var(--line)}
   .type .r:last-child{border-bottom:0}
   .type .lab{width:150px;color:var(--muted);font-size:12.5px;flex:0 0 auto}
-  .d-display{font-size:32px;font-weight:800;letter-spacing:-.02em}
+  .d-display{font-family:var(--display);font-size:36px;font-weight:400;letter-spacing:0}
   .d-h{font-size:22px;font-weight:700}
   .d-body{font-size:16px;color:#dbe3ec}
   .d-mono{font-family:var(--mono);font-size:14px;color:var(--green)}
@@ -142,12 +148,12 @@
 
   <h2>Typography</h2>
   <div class="type">
-    <div class="r"><div class="lab">Display · 800</div><div class="d-display">Never lose a session again</div></div>
+    <div class="r"><div class="lab">Display · Slothy Jelly</div><div class="d-display">Lazy Creatives</div></div>
     <div class="r"><div class="lab">Heading · 700</div><div class="d-h">Back up while you chill</div></div>
     <div class="r"><div class="lab">Body · 400–600</div><div class="d-body">Re-reads and re-hashes every file to prove the backup opens.</div></div>
     <div class="r"><div class="lab">Mono · status</div><div class="d-mono">✓ snapshot verified · 142 files · 0 missing</div></div>
   </div>
-  <p class="note">UI type is <strong style="color:var(--ink)">Inter</strong> (clean, neutral) with a <strong style="color:var(--ink)">monospace</strong> for hashes, counts &amp; status — the logo's hand-drawn lettering carries the personality, so the interface stays quiet. The logo wordmark is <em>art</em>, not a system font: don't re-typeset “Lazy Creatives”.</p>
+  <p class="note"><strong style="color:var(--ink)">Display / wordmark: Slothy Jelly</strong> (by Scratch Design) — the logo's own typeface; use it for the wordmark and big display moments. <strong style="color:var(--ink)">UI &amp; body: Inter</strong>; a <strong style="color:var(--ink)">monospace</strong> for hashes, counts &amp; status. Drop the licensed webfont at <code>brand/slothy-jelly.woff2</code> (or <code>.ttf</code>) for the specimen above to render. <strong style="color:var(--gold)">⚠ Licence:</strong> Slothy Jelly is free for personal use only — buy a commercial/web licence (MyFonts / Font&nbsp;Bundles / Creative&nbsp;Market) before shipping it in the product.</p>
 
   <h2>Voice &amp; tone</h2>
   <div class="voice">
