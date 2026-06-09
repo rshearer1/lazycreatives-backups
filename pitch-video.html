@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LazyCreatives Backups — Pitch</title>
+<title>Lazy Creatives Backups — Pitch</title>
 <style>
   :root{
     --bg:#0a0b0d; --bg2:#111316; --ink:#f3f4f6; --muted:#9aa1ab;
-    --gold:#f5c451; --gold-dim:#a9842a; --green:#4ade80; --red:#ff5d5d;
+    --gold:#86B3D3; --gold-dim:#5e7f96; --green:#4ade80; --red:#f2706e;
     --line:rgba(255,255,255,.08);
     --font: -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
   }
@@ -82,11 +82,11 @@
   .scene.active .logo{animation:pop .8s .1s both}
   .mark{width:13vmin; height:13vmin; border-radius:3vmin; position:relative;
     background:linear-gradient(150deg,#1c1f25,#0c0d10);
-    border:1px solid rgba(245,196,81,.35);
-    box-shadow:0 0 0 1px rgba(0,0,0,.5),0 14px 50px rgba(245,196,81,.14);
+    border:1px solid rgba(134,179,211,.35);
+    box-shadow:0 0 0 1px rgba(0,0,0,.5),0 14px 50px rgba(134,179,211,.14);
     display:flex; align-items:center; justify-content:center}
   .mark::after{content:""; position:absolute; inset:0; border-radius:inherit;
-    background:radial-gradient(60% 60% at 50% 30%,rgba(245,196,81,.25),transparent 70%)}
+    background:radial-gradient(60% 60% at 50% 30%,rgba(134,179,211,.25),transparent 70%)}
   .shield{width:6.4vmin; height:7.2vmin; position:relative; z-index:1}
   .logo .name{text-align:left}
   .logo .name b{display:block; font-size:5.6vmin; font-weight:800; letter-spacing:-.02em; line-height:1}
@@ -119,13 +119,13 @@
   /* close ROI */
   .big{font-size:8vmin; font-weight:800; letter-spacing:-.03em; line-height:1.02}
   .cta{margin-top:5vmin; padding:2vmin 4.4vmin; border-radius:99px;
-    background:var(--gold); color:#1a1304; font-weight:800; font-size:2.6vmin;
-    box-shadow:0 14px 50px rgba(245,196,81,.3); opacity:0}
+    background:var(--gold); color:#0A0B0D; font-weight:800; font-size:2.6vmin;
+    box-shadow:0 14px 50px rgba(134,179,211,.3); opacity:0}
   .scene.active .cta{animation:pop .8s .6s both}
 
   /* progress + dots */
   #bar{position:absolute; top:0; left:0; height:.5vmin; width:0;
-    background:linear-gradient(90deg,var(--gold),#ffe39a); z-index:6; box-shadow:0 0 12px var(--gold)}
+    background:linear-gradient(90deg,var(--gold),#bcd8ee); z-index:6; box-shadow:0 0 12px var(--gold)}
   #dots{position:absolute; bottom:3vmin; left:50%; transform:translateX(-50%);
     display:flex; gap:1.3vmin; z-index:6}
   #dots i{width:1vmin; height:1vmin; border-radius:99px; background:rgba(255,255,255,.18); transition:.3s}
@@ -138,9 +138,9 @@
   #overlay h3{font-size:3vmin; font-weight:700}
   #overlay p{color:var(--muted); font-size:2.1vmin}
   #play{cursor:pointer; width:16vmin; height:16vmin; border-radius:50%;
-    border:1px solid rgba(245,196,81,.4); background:rgba(245,196,81,.08);
+    border:1px solid rgba(134,179,211,.4); background:rgba(134,179,211,.08);
     display:flex; align-items:center; justify-content:center; transition:.2s}
-  #play:hover{background:rgba(245,196,81,.16); transform:scale(1.04)}
+  #play:hover{background:rgba(134,179,211,.16); transform:scale(1.04)}
   #play svg{width:6vmin; height:6vmin; margin-left:1vmin}
   .hint{position:absolute; top:2.4vmin; right:3vmin; color:var(--muted);
     font-size:1.7vmin; z-index:6; opacity:.6}
@@ -173,17 +173,10 @@
 
   <!-- S3 logo -->
   <section class="scene" data-t="5200">
-    <div class="logo">
-      <div class="mark">
-        <svg class="shield" viewBox="0 0 48 54" fill="none">
-          <path d="M24 2 L44 10 V26 C44 40 35 49 24 52 C13 49 4 40 4 26 V10 Z"
-                fill="rgba(245,196,81,.10)" stroke="var(--gold)" stroke-width="2"/>
-          <path class="draw" d="M15 27 l6 6 l13 -14" stroke="var(--green)" stroke-width="3.4"
-                fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="name">
-        <b>LazyCreatives <span class="accent">Backups</span></b>
+    <div class="logo" style="flex-direction:column;gap:1.6vmin">
+      <img src="brand/logo.png" alt="Lazy Creatives Backups" style="height:30vmin;width:auto">
+      <div class="name" style="text-align:center">
+        <b style="font-size:3.6vmin">Backups</b>
         <small>Verified backups your label actually owns.</small>
       </div>
     </div>
@@ -257,7 +250,7 @@
     <div class="kicker">The math for the label</div>
     <div class="big">One unopenable master<br>costs more than <span class="accent">years</span> of this.</div>
     <p class="sub">Verified, deduplicated, self-owned backups for every session the label depends on.</p>
-    <div class="cta">LazyCreatives Backups</div>
+    <div class="cta">Lazy Creatives Backups</div>
   </section>
 
   <div id="dots"></div>
@@ -268,7 +261,7 @@
     <div id="play">
       <svg viewBox="0 0 24 24" fill="var(--gold)"><path d="M8 5v14l11-7z"/></svg>
     </div>
-    <h3>LazyCreatives Backups — 50&#8209;second pitch</h3>
+    <h3>Lazy Creatives Backups — 50&#8209;second pitch</h3>
     <p>Click play, then go full-screen (or screen-record) for your boss.</p>
   </div>
 </div>
